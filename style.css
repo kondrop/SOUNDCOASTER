@@ -1,0 +1,940 @@
+/* style.css */
+:root {
+  /* カラー変数 */
+  --primary-color: #D95D33;        /* メインアクセント、再生状態、アクティブタグ、シークバーのアクティブ部分 */
+  --volume-active-color: #D97E33;   /* 音量スライダーのアクティブ部分とつまみ */
+  --text-color-dark: #36322F;     /* デフォルトの暗いテキスト */
+  --text-color-light: #F4E9E0;     /* プライマリカラー背景上のテキスト */
+  --background-color-main: #628568; /* メイン背景、シークバーの非アクティブトラック、ディスク中央 */
+  --background-color-hover-light: #ccc; /* タグボタンのホバー時 */
+  --disc-background-color: #1C222C; /* 小さいディスク背景 */
+  --large-disc-background-color: #f0e6d8; /* 大きいディスク背景（メイン背景と同じ） */
+  --indicator-color: #D5FE00;      /* 再生インジケーターバー */
+  --volume-icon-color: rgba(0, 0, 0, 0.5); /* 音量スライダーアイコン */
+  --volume-track-inactive: rgba(0, 0, 0, 0.1); /* 音量スライダーの非アクティブトラック */
+  --black: #000;                  /* 黒色 */
+  --transparent: transparent;      /* 透明 */
+  --shadow-color-light: rgba(0,0,0,0.1); /* 薄い影/ボーダー */
+  --shadow-color-medium: rgba(0,0,0,0.15); /* 中くらいの影 */
+  --shadow-color-dark: rgba(0,0,0,0.3); /* 濃い影（ドロップシャドウ） */
+  --shadow-color-inset: rgba(0,0,0,0.3); /* 内側の影 - 薄くした */
+  
+  /* スペーシング変数 */
+  --page-padding: 30px;           /* ページの内側の余白 */
+  --page-bottom-padding: 250px;   /* ページ下部の余白 */
+  --container-max-width: 1400px;  /* コンテナの最大幅 */
+  --card-gap: 10px;              /* カード間の間隔 */
+  --title-margin-bottom: 20px;    /* タイトル下の余白 */
+  --tag-filter-margin-bottom: 40px; /* タグフィルター下の余白 */
+  --tag-button-gap: 10px;          /* タグボタン間の間隔 */
+  --player-card-padding: 24px;    /* プレイヤーカードの内側の余白 */
+  --disc-margin-bottom: 20px;     /* ディスク下の余白 */
+  --current-track-bottom: 40px;   /* 現在のトラック情報の下部からの位置 */
+  --current-track-left: 30px;     /* 現在のトラック情報の左からの位置 */
+  --volume-right: 30px;           /* 音量スライダーの右からの位置 */
+  --volume-icon-margin: 10px;     /* 音量アイコンとスライダーの間隔 */
+  --playback-controls-bottom: 40px; /* 再生コントロールの下からの位置 */
+  --playback-controls-right: 35px;  /* 再生コントロールの右からの位置 */
+  --catalog-padding-x: 40px; /* カタログ左右パディング */
+  
+  /* サイズ変数 */
+  --player-card-width: 210px;     /* プレイヤーカードの幅 */
+  --player-card-border-radius: 10px; /* プレイヤーカードの角丸 */
+  --disc-size: 124px;             /* 通常ディスクのサイズ */
+  --large-disc-size: 470px;       /* 大きいディスクのサイズ */
+  --disc-center-hole: 20px;       /* ディスク中央の穴のサイズ */
+  --large-disc-center-hole: 30px; /* 大きいディスク中央の穴のサイズ */
+  --disc-center-size: 40px;       /* ディスク中央部分のサイズ */
+  --indicator-width: 20px;        /* 再生インジケーターの幅 */
+  --indicator-height: 18px;       /* 再生インジケーターの高さ */
+  --seek-bar-height: 20px;        /* シークバーの高さ */
+  --seek-thumb-size: 10px;        /* シークバーのつまみサイズ */
+  --volume-track-width: 18px;     /* 音量スライダートラックの幅 */
+  --volume-track-height: 250px;   /* 音量スライダートラックの高さ */
+  --volume-track-radius: 10px;    /* 音量スライダートラックの角丸 */
+  --volume-thumb-size: 18px;      /* 音量スライダーつまみのサイズ */
+  --volume-icon-size: 32px;       /* 音量アイコンのサイズ */
+  --title-font-size: 80px;        /* メインタイトルのフォントサイズ */
+  --track-title-size: 15px;       /* トラックタイトルのフォントサイズ */
+  --track-artist-size: 12px;      /* アーティスト名のフォントサイズ */
+  --current-track-title-size: 16px; /* 現在再生中のトラックタイトルサイズ */
+  --current-track-artist-size: 14px; /* 現在再生中のアーティスト名サイズ */
+  --current-track-width: 300px;   /* 現在再生中のトラック情報の幅 */
+  --tag-button-font-size: 12px;   /* タグボタンのフォントサイズ */
+  --tag-button-padding: 7px 20px; /* タグボタンのパディング */
+  --playback-control-size: 40px;  /* 再生コントロールボタンのサイズ */
+  --large-disc-opacity: 1; /* 下部ディスクの黒の透け具合 */
+  --large-disc-label-size: 48%; /* 黒い円（ラベル）のサイズ */
+  --large-disc-label-color: #000000; /* 黒い円（ラベル）の色 */
+  --large-disc-groove-color: rgba(255, 255, 255, 0.1); /* 基本の溝の色 */
+  --large-disc-groove-color-deep: rgba(255, 255, 255, 0.04); /* 深い溝の色 */
+  --large-disc-groove-color-fine: rgba(255, 255, 255, 0.06); /* 細かい溝の色 */
+  --large-disc-groove-color-normal: rgba(255, 255, 255, 0.04); /* 通常の溝の色 */
+  --large-disc-thumbnail-mask-size: 35%; /* 下部ディスクのサムネイルマスクサイズ */
+  --large-disc-label2-size: 38%; /* 追加した円のサイズ */
+  --large-disc-label2-color: #1a1a1a; /* ラベル前面の円の色 */
+  --large-disc-center-hole-size: 30px; /* センター穴のサイズ */
+  --large-disc-center-hole-color: var(--background-color-main); /* センター穴の色 */
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.catalog-container {
+    max-width: var(--container-max-width);
+    margin: 10 auto;
+    display: flex; /* Flexboxを使用 */
+    flex-wrap: wrap; /* 折り返しを許可 */
+    column-gap: var(--card-gap); /* カード間のスペース */
+    row-gap: 5px;
+    justify-content: center; /* カードを中央揃えに配置 */
+    /* コンテナが表示されることを確認 */
+    min-height: 100px; /* 表示確認のための最小高さを追加 */
+    padding-left: var(--catalog-padding-x);
+    padding-right: var(--catalog-padding-x);
+    /* border: 1px dashed blue; */ /* レイアウトデバッグ用にコメント解除 */
+}
+
+.player-card {
+    background-color: var(--transparent);
+    border-radius: var(--player-card-border-radius);
+    margin-top: 0px;
+    padding: var(--player-card-padding);
+    text-align: center;
+    position: relative;
+    cursor: pointer;
+    /* transition: all 0.3s ease; */ /* 一般的なトランジションを削除 */
+    width: var(--player-card-width);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: auto;
+    box-shadow: none;
+    /* デフォルトのテキストカラーを削除 */
+    transition: transform 600ms cubic-bezier(0.3, 0, 0.1, 1),
+            box-shadow 600ms cubic-bezier(0.3, 0, 0.1, 1),
+            opacity 600ms cubic-bezier(0.3, 0, 0.1, 1), /* 不透明度のトランジションを追加 */
+            background-color 600ms cubic-bezier(0.3, 0, 0.1, 1);
+    opacity: 1; /* 初期の不透明度 */
+    transform: translateY(0) scale(1); /* 初期のトランスフォーム */
+}
+
+.player-card:hover {
+    background-color: var(--transparent);
+    transform: translateY(-4px);
+    box-shadow: none;
+}
+
+.player-card:hover .track-info * {
+    color: var(--primary-color); /* ホバー時にテキストをプライマリカラーに */
+}
+
+.player-card.hidden {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98); /* オプション：わずかに移動/縮小 */
+    pointer-events: none; /* 非表示カードのクリックを無効化 */
+}
+
+.player-card.playing {
+    background-color: var(--primary-color);
+}
+
+.player-card.playing .track-info * {
+    color: var(--text-color-light);
+    /* opacity: 0.8; */ /* 再生状態の不透明度を削除 */
+}
+
+.disc-container {
+    position: relative;
+    width: var(--disc-size); /* ディスクのサイズ */
+    height: var(--disc-size); /* ディスクのサイズ */
+    margin: 0 auto var(--disc-margin-bottom);
+    animation: rotate 8s linear infinite paused;
+}
+
+.disc-container.playing {
+    animation-play-state: running;
+}
+
+@keyframes rotate {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.disc {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background-color: var(--disc-background-color); /* ネイビーブルー */
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    /* 中央の穴用マスク */
+    -webkit-mask-image: radial-gradient(circle at center, var(--transparent) var(--disc-center-hole), var(--black) calc(var(--disc-center-hole) + 1px));
+    mask-image: radial-gradient(circle at center, var(--transparent) var(--disc-center-hole), var(--black) calc(var(--disc-center-hole) + 1px));
+}
+
+.disc::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: var(--disc-center-size);
+    height: var(--disc-center-size);
+    background-color: var(--background-color-main);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2;
+}
+
+.thumbnail {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    transform: scale(1.5, 1.5); /* 横も縦もズーム！ */
+    transition: transform 600ms cubic-bezier(0.3, 0, 0.1, 1);
+    z-index: 10;
+}
+
+.player-card:hover .thumbnail {
+    transform: scale(1.6, 1.6); /* ← ホバー時にちょっとだけ拡大！ */
+}
+
+.player-card:hover .thumbnail {
+    opacity: 1;
+}
+
+.track-info {
+    margin-top: -10px;
+    width: 100%; /* text-overflowに必要 */
+}
+
+.track-info * { /* .track-infoのすべての子孫要素を選択 */
+    color: var(--text-color-light); /* テキスト色を白に変更 */
+    transition: color 600ms cubic-bezier(0.3, 0, 0.1, 1); /* 指定されたイージングでスムーズな色の変化 */
+}
+
+.track-title {
+    font-size: var(--track-title-size);
+    font-weight: 600;
+    line-height: 130%;
+    margin-bottom: 0px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    font-feature-settings: "palt";
+
+    /* color: #36322F; */ /* .track-info *から継承 */
+}
+
+.track-artist {
+    font-size: var(--track-artist-size);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-feature-settings: "palt";
+    /* color: var(--text-color-dark); */ /* 継承 */
+}
+
+.track-genre {
+    font-size: 0.9em;
+    /* color: #aaa; */ /* 必要であれば後で変数を使用 */
+    margin: 0;
+    opacity: 0.5;
+}
+
+.catalog-tags {
+    font-size: 12px;
+    /* color: #888; */ /* .track-info *によって上書きされる */
+    margin-top: 5px;
+    opacity: 0.5;
+}
+
+.youtube-container {
+    /* 非表示にするが、APIのために存在させる */
+    position: absolute;
+    top: -9999px;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    /* display: none; は稀にAPI読み込みを妨げる可能性あり */
+}
+
+/* 再生中インジケーター (SVG) */
+.now-playing {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    width: var(--indicator-width);
+    height: var(--indicator-height);
+    opacity: 0;
+    transition: opacity 0.3s;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.now-playing.active {
+    opacity: 1;
+}
+
+.now-playing svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.now-playing rect {
+    width: 30%; /* 各バーの幅 */
+    /* fill: #333; */ /* バーの色 */
+    fill: var(--indicator-color); /* チャートリューズ */
+    /* スムーズな遷移のために高さとyをアニメーション化 */
+    transition: height 0.2s ease-in-out, y 0.2s ease-in-out;
+}
+
+/* 下部プレイヤー */
+#bottom-player-container {
+    position: fixed;
+    /* bottom: -160px; */ /* 非表示で開始 (高さ + バッファ) */
+    /* bottom: -52vh; */ /* 新しい高さに合わせて調整 + 少しバッファ */
+    /* bottom: -50vh; */ /* コンテナの高さ分だけ下に隠す */
+    bottom: -600px; /* ディスクサイズ(500px)より大きい負の値で確実に隠す */
+    left: 0;
+    width: 100%;
+    /* height: 150px; */ /* コンテナの高さ */
+    height: 50vh; /* 画面の高さの半分に */
+    display: flex;
+    justify-content: center;
+    /* align-items: center; */
+    align-items: flex-end; /* ディスクを下端揃えにする */
+    z-index: 1000;
+    /* transition: bottom 0.5s ease-out; */ /* 既存のトランジションをコメントアウトまたは削除 */
+    transition: bottom 600ms cubic-bezier(0.3, 0, 0.1, 1), transform 0.4s ease-in-out; /* bottomのトランジションを変更 */
+    transform: translateY(0); /* 初期状態のtransform */
+    /* pointer-events: none; */ /* クリックを透過させる */ /* この行を削除またはコメントアウト */
+    /* background-color: rgba(28, 34, 44, 0.9); */ /* 透明度付きネイビーブルー */ /* この行をコメントアウト */
+    /* backdrop-filter: blur(5px); */ /* 背景ブラー（任意、対応ブラウザのみ）*/
+    /* border: 1px dashed orange; */ /* デバッグ用にコメント解除 */
+}
+
+#bottom-player-container.visible {
+    /* bottom: 20px; */ /* 表示時の位置 */
+    /* bottom: 0; */ /* 画面下部に表示 */
+    /* bottom: -275px; */ /* ディスクの半分が見える位置に調整 */
+    bottom: -250px; /* 新しいディスクサイズ(500px)の半分が見える位置に */
+}
+
+/* タップ時に下に引っ込むスタイル */
+#bottom-player-container.retracted {
+    bottom: -600px; /* 完全に隠れる位置に戻す */
+    /* transform: translateY(100px); */ /* 例: 少し下に移動させるアニメーション（bottomと併用は注意） */
+}
+
+#large-disc-container {
+    /* width: 120px; */ /* 大きいディスクのサイズ */
+    /* height: 120px; */
+    /* width: 35vh; */ /* プレイヤーの高さに合わせて調整 */
+    /* height: 35vh; */ /* プレイヤーの高さに合わせて調整 */
+    /* width: 650px; */ /* 固定サイズに設定 */
+    /* height: 650px; */ /* 固定サイズに設定 */
+    /* width: 550px; */ /* 新しい固定サイズに設定 */
+    /* height: 550px; */
+    width: var(--large-disc-size); /* 固定サイズ(500px)に設定 */
+    height: var(--large-disc-size); /* 固定サイズ(500px)に設定 */
+    position: relative;
+    animation: rotate 6s linear infinite paused; /* より速い回転 */
+    filter: drop-shadow(0 5px 15px var(--shadow-color-dark));
+    pointer-events: auto; /* ディスク部分のクリックを有効にする */
+}
+
+#large-disc-container.playing {
+    animation-play-state: running;
+}
+
+#large-disc {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: inset 0 0 15px var(--shadow-color-inset);
+    background-color: rgba(0,0,0,var(--large-disc-opacity));
+    background-image:
+      /* 深い溝（太くて濃い） */
+      radial-gradient(circle at 50% 50%, transparent 60%, var(--large-disc-groove-color-deep) 61%, transparent 62%),
+      radial-gradient(circle at 50% 50%, transparent 75%, var(--large-disc-groove-color-deep) 76%, transparent 77%),
+      radial-gradient(circle at 50% 50%, transparent 88%, var(--large-disc-groove-color-deep) 89%, transparent 90%),
+
+      /* ラベル直後の細かい溝（濃い） */
+      repeating-radial-gradient(circle at 50% 50%, var(--large-disc-groove-color-fine) 0px, var(--large-disc-groove-color-fine) 1.2px, transparent 1.7px, transparent 3px  ),
+
+      /* 通常の溝（薄い） */
+      repeating-radial-gradient(circle at 50% 50%, var(--large-disc-groove-color-normal) 0px, var(--large-disc-groove-color-normal) 1.5px, transparent 2.5px, transparent 7px)
+    ;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+#large-disc::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: var(--large-disc-center-hole);
+    height: var(--large-disc-center-hole);
+    background-color: var(--background-color-main);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 20;
+    pointer-events: none;
+}
+
+#large-disc-label {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: var(--large-disc-label-size);
+    height: var(--large-disc-label-size);
+    background: var(--large-disc-label-color);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 0;
+}
+
+#large-thumbnail-wrapper {
+    z-index: 30;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: var(--large-disc-thumbnail-mask-size);
+    height: var(--large-disc-thumbnail-mask-size);
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    overflow: hidden;
+}
+
+#large-thumbnail {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    transform: scale(2.0, 2.0);
+    border-radius: 50%;
+}
+
+/* レスポンシブ調整 */
+@media (max-width: 600px) {
+    .player-card {
+        flex-basis: calc(50% - 15px); /* 2列 (gap/2) */
+    }
+    .disc-container {
+        width: 140px;
+        height: 140px;
+    }
+}
+
+@media (max-width: 480px) {
+     .catalog-container {
+         gap: var(--card-gap); /* より小さいギャップ */
+         padding-left: 10px; /* ある程度のパディングを確保 */
+         padding-right: 10px;
+     }
+    .player-card {
+        flex-basis: 100%; /* 1列 */
+    }
+    .disc-container {
+        width: 160px;
+        height: 160px;
+    }
+    #bottom-player-container {
+         /* height: 120px; */
+         height: 300px; /* 小さい画面では少し小さく */
+         /* bottom: -130px; */ /* 初期の非表示位置を調整 */
+         /* bottom: -47vh; */ /* 新しい高さに合わせて調整 */
+         /* bottom: -45vh; */ /* コンテナの高さ分だけ下に隠す */
+         /* bottom: -300px; */ /* コンテナの高さ分だけ下に隠す */
+         bottom: -600px; /* ディスクサイズ(500px)より大きい負の値で確実に隠す */
+         background-color: rgba(28, 34, 44, 0.95); /* 小さい画面ではわずかに不透明度を上げる */
+    }
+    #bottom-player-container.visible {
+         /* bottom: 15px; */
+         /* bottom: 0; */ /* 画面下部に表示 */
+         /* bottom: -275px; */ /* ディスクの半分が見える位置に調整 */
+         bottom: -250px; /* 新しいディスクサイズ(500px)の半分が見える位置に */
+    }
+    #large-disc-container {
+         /* width: 100px; */
+         /* height: 100px; */
+         /* width: 30vh; */ /* 小さい画面用に調整 */
+         /* height: 30vh; */ /* 小さい画面用に調整 */
+         /* width: 650px; */ /* 固定サイズに設定 */
+         /* height: 650px; */ /* 固定サイズに設定 */
+         /* width: 550px; */ /* 新しい固定サイズに設定 */
+         /* height: 550px; */ /* 新しい固定サイズに設定 */
+         /* width: 550px; */ /* コンテナの高さ(45vh)より小さい値に */
+         /* height: 550px; */ /* コンテナの高さ(45vh)より小さい値に */
+         width: 500px; /* 新しい固定サイズ(500px)に設定 */
+         height: 500px; /* 新しい固定サイズ(500px)に設定 */
+    }
+}
+
+.current-track-info {
+    text-align: left; /* 中央揃えから左揃えに変更 */
+    color: var(--text-color-light); /* 文字色を白に設定 */
+    position: fixed;
+    bottom: var(--current-track-bottom); /* ディスクと被らない高さに調整 */
+    left: var(--current-track-left); /* 左端からの余白 */
+    width: var(--current-track-width); /* 幅を制限 */
+    padding: 10px 0; /* 上下の余白を追加 */
+    background-color: transparent; /* 背景を透明に */
+    backdrop-filter: none; /* 背景ぼかしを削除 */
+    z-index: 100; /* 重なり順序を設定 */
+    opacity: 0; /* 初期状態は透明に */
+    transform: translateY(10px); /* 初期状態は少し下に配置 */
+    pointer-events: none; /* 非表示時はクリックできないように */
+    transition: opacity 600ms cubic-bezier(0.3, 0, 0.1, 1),
+                transform 600ms cubic-bezier(0.3, 0, 0.1, 1); /* 他と同じイージング */
+}
+
+.current-track-info.visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto; /* 表示時はクリック可能に */
+}
+
+.track-title {
+    font-size: var(--current-track-title-size);
+    font-weight: bold;
+    margin-bottom: 0px;
+    margin-top: 5px;
+}
+
+.track-artist {
+    font-size: var(--current-track-artist-size);
+    color: var(--text-color-light); /* 白色テキスト */
+    margin: 0 0 5px 0;
+}
+
+.track-genre {
+    font-size: 12px;
+    color: var(--text-color-light); /* 白色テキスト */
+    opacity: 0.7;
+    margin: 0;
+}
+
+#catalog-container {
+}
+
+/* タグフィルターコンテナ */
+.tag-filter-container {
+    max-width: var(--container-max-width);
+    margin: 0 auto var(--tag-filter-margin-bottom) auto;
+    
+    display: flex;             /* Flexbox を有効に */
+    justify-content: center;   /* 中央揃え */
+    gap: var(--tag-button-gap); /* ボタン同士の間にスペース */
+    flex-wrap: wrap;           /* 画面が狭い時に折り返し可 */
+}
+
+
+/* タグボタン */
+.tag-button {
+  background-color: var(--transparent);
+  color: var(--text-color-light); /* テキスト色を白に変更 */
+  border: 1px solid var(--text-color-light); /* 枠線も白に変更 */
+  border-radius: 9999px; /* 完全に丸めて pill 状に */
+  padding: var(--tag-button-padding); /* 上下・左右の余白 */
+  font-size: var(--tag-button-font-size); /* フォント大きめ */
+  font-weight: 600; /* 太字気味 */
+  line-height: 1; /* 縦詰まり防止 */
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tag-button:hover {
+    background-color: var(--background-color-hover-light); /* ホバー時に少し暗いグレー */
+}
+
+.tag-button.active {
+    background-color: var(--primary-color); /* アクティブタグにチャートリューズ */
+    color: var(--text-color-light); /* アクティブタグにネイビーブルーテキスト */
+    border-color: var(--primary-color); /* ボーダーの色がアクティブ背景と一致するように */
+}
+
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Noto+Sans+JP:wght@700&display=swap');
+
+body {
+    background-color: var(--background-color-main); /* 画像に近い背景色 */
+    color: var(--text-color-dark); /* 基本の文字色 */
+    font-family: 'Noto Sans JP', sans-serif; /* 基本フォント */
+    margin: 0;
+    padding: var(--page-padding);
+    background-image: url('back.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    padding-bottom: var(--page-bottom-padding);
+    min-height: 100vh;
+}
+
+.title-container {
+    text-align: center;
+    margin-bottom: var(--title-margin-bottom);
+}
+
+.main-title {
+    font-family: 'Montserrat', sans-serif;
+    font-size: var(--title-font-size); /* 大きめのフォントサイズ */
+    font-weight: 700; /* デフォルトは太字 (Bold) */
+    color: var(--text-color-light); /* タイトル色を白に変更 */
+    margin-bottom: 0px; /* サブタイトルとの間隔を調整 */
+}
+
+.main-title .record-part {
+    font-weight: 400; /* Regular */
+}
+
+.sub-title {
+    font-size: 1.2rem;
+    color: var(--text-color-dark);
+    margin-top: 0;
+    font-weight: 700; /* Bold */
+}
+
+.song-item {
+    /* 既存のスタイル */
+    text-align: center; /* テキストを中央揃え */
+    margin-bottom: 20px; /* 要素間のスペース */
+    width: 200px; /* 幅を固定 */
+}
+
+.album-art {
+    width: 250px; /* アルバムアートのサイズ */
+    height: 250px;
+    background-color: var(--background-color-hover-light); /* プレースホルダーの色 */
+    background-size: cover;
+    background-position: center;
+    margin: 0 auto 10px; /* 中央揃えと下のマージン */
+    border-radius: 50%; /* 円形にする */
+    position: relative;
+    overflow: hidden; /* 内側の円のために必要 */
+}
+
+.album-art::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 30px; /* 内側の円のサイズ */
+    height: 30px;
+    background-color: var(--background-color-main); /* 背景色と同じにして穴を開けたように見せる */
+    border-radius: 50%;
+    border: 1px solid var(--shadow-color-light); /* わずかな境界線 */
+}
+
+
+/* 最初の要素（選択されている風）のスタイル */
+.song-item:first-child .album-art {
+    width: 200px;
+    height: 200px;
+    border-radius: 15px; /* 四角にする */
+    background-color: var(--primary-color); /* オレンジ色 (一貫性のためにプライマリカラー) */
+}
+
+.song-item:first-child .album-art::after {
+    display: none; /* 最初の要素の内側の円は非表示 */
+}
+
+.song-item:first-child .album-art img {
+    width: 150px; /* 中の画像を少し小さく */
+    height: 150px;
+    border-radius: 50%; /* 中の画像は円形 */
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.song-info {
+    /* スタイルを調整 */
+}
+
+.song-title {
+    font-weight: bold;
+    font-size: 1rem;
+    margin-bottom: 3px;
+}
+
+.song-artist {
+    font-size: 0.9rem;
+    /* color: #666; */ /* 必要があれば変数を使用 */
+}
+
+/* シークバーエリア */
+#seek-bar-container {
+    position: fixed; /* 固定位置にする */
+    bottom: 0px; /* 画面の下部に配置 */
+    left: 0;
+    width: 100%; /* 幅を100%に */
+    height: var(--seek-bar-height); /* 高さを設定 */
+    background-color: var(--transparent); /* 背景色を透明に */
+    opacity: 0; /* 初期状態では非表示 */
+    pointer-events: none; /* 非表示時はクリックできないように */
+    transition: opacity 600ms cubic-bezier(0.3, 0, 0.1, 1); /* 他の要素と同じトランジション */
+    z-index: 1001; /* 下部ディスクより前面に表示 */
+}
+
+#seek-bar-container.visible {
+    opacity: 1; /* 表示状態 */
+    pointer-events: auto; /* 表示時はクリック可能に */
+}
+
+#seek-bar {
+    -webkit-appearance: none; /* Safari用 */
+    appearance: none; /* デフォルトのスタイルをリセット */
+    width: 100%; /* 幅を100%に */
+    height: var(--seek-bar-height); /* 高さを設定 */
+    background: var(--transparent); /* 背景色を透明に */
+    cursor: pointer; /* カーソルをポインターに */
+}
+
+/* スライダーのトラック */
+#seek-bar::-webkit-slider-runnable-track {
+    background: linear-gradient(to right, var(--primary-color) 0%, var(--primary-color) var(--seek-percentage), var(--transparent) var(--seek-percentage), var(--transparent) 100%); /* トラックの色、非アクティブ部分を透明に */
+    height: var(--seek-bar-height); /* トラックの高さ */
+    border-radius: 0; /* 角を丸くしない */
+}
+
+#seek-bar::-moz-range-track {
+    background: linear-gradient(to right, var(--primary-color) 0%, var(--primary-color) var(--seek-percentage), var(--transparent) var(--seek-percentage), var(--transparent) 100%); /* トラックの色、非アクティブ部分を透明に */
+    height: var(--seek-bar-height); /* トラックの高さ */
+    border-radius: 0; /* 角を丸くしない */
+}
+
+/* スライダーのサム */
+#seek-bar::-webkit-slider-thumb {
+    -webkit-appearance: none; /* Safari用 */
+    appearance: none; /* デフォルトのスタイルをリセット */
+    width: var(--seek-thumb-size); /* サムのサイズを設定 */
+    height: var(--seek-thumb-size); /* サムのサイズを設定 */
+    background: var(--primary-color); /* サムの色を設定 */
+    border-radius: 50%; /* サムを円形に */
+    cursor: pointer; /* カーソルをポインターに */
+    opacity: 0;
+}
+
+#seek-bar::-moz-range-thumb {
+    width: var(--seek-thumb-size); /* サムのサイズを設定 */
+    height: var(--seek-thumb-size); /* サムのサイズを設定 */
+    background: var(--primary-color); /* サムの色を設定 */
+    border-radius: 50%; /* サムを円形に */
+    cursor: pointer; /* カーソルをポインターに */
+    opacity: 0;
+}
+
+#current-time-display,
+#duration-display {
+    display: none; /* 数字を非表示にする */
+}
+
+/* --- 垂直音量スライダー（カスタム） --- */
+#volume-slider-container {
+    position: fixed;
+    right: var(--volume-right); /* 右端からの距離 */
+    top: 50%; /* 上から50%の位置 */
+    transform: translateY(-50%); /* Y軸方向に自身の高さの半分だけ上に移動して中央揃え */
+    width: 40px; /* コンテナ幅 */
+    height: auto; /* 高さはコンテンツに合わせる */
+    z-index: 1001;
+    cursor: pointer; /* コンテナ全体を掴めるように */
+}
+
+/* アイコン共通スタイル */
+.volume-icon {
+    text-align: center; /* SVGを中央揃え */
+}
+
+.volume-icon.top {
+    margin-bottom: var(--volume-icon-margin); /* 下のバーとの間隔 */
+}
+
+.volume-icon.bottom {
+    margin-top: var(--volume-icon-margin); /* 上のバーとの間隔 */
+}
+
+/* SVGアイコンのスタイル */
+.volume-svg {
+    width: var(--volume-icon-size); /* アイコンの幅 */
+    height: var(--volume-icon-size); /* アイコンの高さ */
+    padding-left: 4px; /* 左パディング */
+    fill: #26452A; /* 指定された色 */
+    display: block; /* 中央揃えのため */
+    margin: 0 auto; /* 中央揃えのため */
+    transition: transform 400ms cubic-bezier(0.3, 0, 0.1, 1); /* ホバーアニメーション */
+}
+
+/* アイコンホバー時のスタイル */
+.volume-icon:hover .volume-svg {
+    transform: scale(1.2);
+}
+
+/* カスタムスライダートラック */
+#volume-track {
+    position: relative; /* サムの位置決めの基準 */
+    width: var(--volume-track-width); /* トラック幅 */
+    height: var(--volume-track-height); /* トラック長さ */
+    background: linear-gradient(to top,
+        var(--primary-color) 0%,
+        var(--volume-active-color) var(--volume-percentage, 50%),
+        var(--volume-track-inactive) var(--volume-percentage, 50%),
+        var(--volume-track-inactive) 100%); /* アクティブ部分のグラデーション */
+    border-radius: var(--volume-track-radius); /* 角丸 */
+    box-shadow: inset 0 0 4px var(--shadow-color-medium); /* 内側に影 */
+    margin: 0 auto; /* コンテナ内で中央揃え */
+    padding: 10px 0; /* パディング - JavaScriptの計算と一致させる */
+}
+
+/* カスタムスライダーサム */
+#volume-thumb {
+    position: absolute;
+    left: 50%; /* トラックの水平中央に */
+    width: var(--volume-thumb-size); /* サムの幅 */
+    height: var(--volume-thumb-size); /* サムの高さ */
+    background-color: var(--volume-active-color); /* サムの色 */
+    border-radius: 50%;
+    transform: translate(-50%, -50%) scale(1); /* 自身の中心を基点に、初期スケール */
+    cursor: grab;
+    transition: transform 300ms cubic-bezier(0.0, 0, 0.1, 1); /* transformプロパティに対するトランジション */
+}
+
+/* ホバー時またはドラッグ中にスケールを適用 */
+#volume-thumb:hover,
+#volume-thumb.dragging {
+    transform: translate(-50%, -50%) scale(1.6); /* ホバー時の拡大率 */
+}
+
+#volume-thumb:active {
+    cursor: grabbing;
+}
+
+/* クリックスパークキャンバス */
+#click-spark-canvas {
+    position: fixed; /* 画面に固定 */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none; /* クリックイベントを透過させる */
+    z-index: 9999; /* 他の要素より手前に表示 */
+    display: block; /* canvasのデフォルト余白を消す */
+    user-select: none; /* テキスト選択などを防ぐ */
+}
+
+/* FLIPアニメーション用のルール */
+.player-card.flipping {
+    /* FLIP中はtransformにのみトランジションを適用 */
+    transition: transform 600ms cubic-bezier(0.3, 0, 0.1, 1);
+}
+
+/* 再生モードコントロール */
+#playback-control-container {
+  position: fixed;
+  right: var(--playback-controls-right);
+  bottom: var(--playback-controls-bottom);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 1002;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 300ms cubic-bezier(0.3, 0, 0.1, 1),
+              transform 300ms cubic-bezier(0.3, 0, 0.1, 1);
+  pointer-events: none;
+}
+
+#playback-control-container.visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.playback-control-button {
+  width: var(--playback-control-size);
+  height: var(--playback-control-size);
+  border-radius: 50%;
+  background-color: var(--text-color-light);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 5px var(--shadow-color-medium);
+  transition: transform 300ms cubic-bezier(0.3, 0, 0.1, 1),
+              background-color 300ms cubic-bezier(0.3, 0, 0.1, 1);
+}
+
+.playback-control-button:hover {
+  transform: scale(1.1);
+}
+
+.playback-control-button.active {
+  background-color: var(--primary-color);
+}
+
+.playback-control-button svg {
+  width: 24px;
+  height: 24px;
+  fill: var(--text-color-dark);
+  transition: fill 300ms cubic-bezier(0.3, 0, 0.1, 1);
+}
+
+.playback-control-button.active svg {
+  fill: var(--text-color-light);
+}
+
+/* レスポンシブ調整 */
+@media (max-width: 600px) {
+  #playback-control-container {
+    bottom: 100px;
+    right: 25px;
+  }
+}
+
+#large-disc-label2 {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: var(--large-disc-label2-size);
+    height: var(--large-disc-label2-size);
+    background: var(--large-disc-label2-color);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2;
+}
+
+#large-disc-center-hole {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: var(--large-disc-center-hole-size);
+    height: var(--large-disc-center-hole-size);
+    background: var(--large-disc-center-hole-color);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+    pointer-events: none;
+}

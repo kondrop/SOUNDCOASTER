@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sound Coaster</title>
+    <!-- Link to the external CSS file -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <canvas id="click-spark-canvas"></canvas>
+    <div class="title-container">
+        <h1 class="main-title">SOUND<span class="record-part">COASTER</span></h1>
+        
+    </div>
+    <div id="global-error-message" style="color: red; text-align: center; padding: 10px; background-color: #fdd; border: 1px solid red; display: none;"></div>
+    <!-- Hidden YouTube Player Container -->
+    <div class="youtube-container">
+        <div id="youtube-player"></div>
+    </div>
+
+    <!-- Tag Filter Container -->
+    <div id="tag-filter-container" class="tag-filter-container">
+        <!-- タグボタンはここに動的に追加されます -->
+        <button class="tag-button active" data-tag="all">All</button> 
+    </div>
+
+    <!-- Catalog Container -->
+    <div class="catalog-container" id="catalog-container">
+        <!-- Player cards will be added here by JavaScript -->
+        <p id="loading-message" style="text-align: center; width: 100%; color: #999;">Loading Catalog...</p>
+    </div>
+
+    <!-- Global Error Message Area -->
+    <div id="global-error-message"></div>
+
+    <!-- 再生モードコントロール -->
+    <div id="playback-control-container">
+        <!-- 連続再生ボタン -->
+        <button id="sequential-playback-btn" class="playback-control-button active" title="連続再生">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M8 5v14l11-7z"/>
+                <path d="M4 19h2V5H4v14zm16-9.48V5h-5.38l3 3-2.25 2.25 1.42 1.42z"/>
+            </svg>
+        </button>
+        <!-- ランダム再生ボタン -->
+        <button id="random-playback-btn" class="playback-control-button" title="ランダム再生">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/>
+            </svg>
+        </button>
+    </div>
+
+  <!-- Seek Bar Area -->
+<div id="seek-bar-container">
+        <!-- Current Track Info -->
+        <div id="current-track-info" class="current-track-info">
+            <p id="current-track-title" class="track-title"></p>
+            <p id="current-track-artist" class="track-artist"></p>
+            <p id="current-track-genre" class="track-genre"></p>
+        </div>
+    <input type="range" id="seek-bar" value="0" max="100">
+</div>
+
+    <!-- 下部プレイヤーコンテナ -->
+    <div id="bottom-player-container">
+        <div id="large-disc-container">
+            <div id="large-disc">
+                <img id="large-thumbnail" src="" alt="Currently Playing">
+            </div>
+        </div>
+    </div>
+    <div style="display: none;">
+        <span id="current-time-display">0:00</span> /
+        <span id="duration-display">0:00</span>
+      </div>
+
+      <div id="volume-slider-container">
+        <!-- ★追加: 上部アイコン -->
+        <div class="volume-icon top">
+            <svg class="volume-svg" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" id="fi_7807571"><g id="_x30_1"><path d="m30 16c0 .55-.45 1-1 1h-2.95v2.95c0 .55-.45 1-1 1s-1-.45-1-1v-2.95h-2.95c-.55 0-1-.45-1-1s.45-1 1-1h2.95v-2.95c0 .55.45-1 1-1s1 .45 1 1v2.95h2.95c.55 0 1 .45 1 1zm-13.08-10.61c-.65-.35-1.43-.31-2.05.09l-8.04 5.32h-2.83c-1.1 0-2 .9-2 2v6.4c0 1.1.9 2 2 2h2.83l8.04 5.32c.33.22.72.33 1.1.33.32 0 .65-.08.95-.24.65-.35 1.05-1.02 1.05-1.76v-17.7c0-.74-.4-1.41-1.05-1.76z"></path></g></svg>
+        </div>
+        <div id="volume-track"> 
+            <div id="volume-thumb"></div> 
+        </div>
+        <!-- ★追加: 下部アイコン -->
+        <div class="volume-icon bottom">
+            <svg class="volume-svg" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" id="fi_7807575"><g id="_x30_1"><path d="m30 16c0 .55-.45 1-1 1h-7.9c-.55 0-1-.45-1-1s.45-1 1-1h7.9c.55 0 1 .45 1 1zm-13.08-10.61c-.65-.35-1.44-.31-2.05.09l-8.04 5.32h-2.83c-1.1 0-2 .9-2 2v6.4c0 1.1.9 2 2 2h2.83l8.04 5.32c.33.22.72.33 1.1.33.32 0 .65-.08.95-.24.65-.35 1.05-1.02 1.05-1.76v-17.7c0-.74-.4-1.41-1.05-1.76z"></path></g></svg>
+        </div>
+    </div>
+      
+
+    <!-- YouTube IFrame API Loader Script (Keep this in HTML) -->
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <!-- Link to the external JavaScript file (Defer ensures HTML is parsed first) -->
+    <script defer src="script.js"></script>
+    <!-- Volume Slider -->
+    
+</body>
+</html>
