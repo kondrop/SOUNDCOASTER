@@ -717,45 +717,30 @@ function clampCupPosition(x, y) {
                 stopCupPositionTracking();
                 return;
             }
-            
+
+            if (!document.body.contains(cardElement)) {
+                resetCupFromCard();
+                return;
+            }
+
             const cardRect = cardElement.getBoundingClientRect();
-            const cardStyle = window.getComputedStyle(cardElement);
-            const paddingLeft = parseFloat(cardStyle.paddingLeft) || 0;
-            const paddingTop = parseFloat(cardStyle.paddingTop) || 0;
-            const borderLeft = parseFloat(cardStyle.borderLeftWidth) || 0;
-            const borderTop = parseFloat(cardStyle.borderTopWidth) || 0;
-            
-            // padding-box基準のサイズと位置を計算
-            const paddingBoxWidth = cardRect.width - borderLeft - parseFloat(cardStyle.borderRightWidth || 0) - paddingLeft - parseFloat(cardStyle.paddingRight || 0);
-            const paddingBoxHeight = cardRect.height - borderTop - parseFloat(cardStyle.borderBottomWidth || 0) - paddingTop - parseFloat(cardStyle.paddingBottom || 0);
-            const paddingBoxLeft = cardRect.left + borderLeft + paddingLeft;
-            const paddingBoxTop = cardRect.top + borderTop + paddingTop;
-            
-            // カードの位置やサイズが変わった場合のみ更新（最適化）
-            if (Math.abs(cardRect.left - lastCardLeft) > 0.1 || 
+
+            if (Math.abs(cardRect.left - lastCardLeft) > 0.1 ||
                 Math.abs(cardRect.top - lastCardTop) > 0.1 ||
                 Math.abs(cardRect.width - lastCardWidth) > 0.1 ||
                 Math.abs(cardRect.height - lastCardHeight) > 0.1) {
-                
-                // カップの中心位置を計算（padding-box基準）
-                const targetCenterXInPaddingBox = paddingBoxWidth * leftPercent;
-                const targetCenterYInPaddingBox = paddingBoxHeight * topPercent;
-                
-                // 画面座標に変換
-                const targetScreenX = paddingBoxLeft + targetCenterXInPaddingBox;
-                const targetScreenY = paddingBoxTop + targetCenterYInPaddingBox;
-                
-                // 直接CSSプロパティを設定（GSAPより軽量）
-                cupCursor.style.left = targetScreenX + 'px';
-                cupCursor.style.top = targetScreenY + 'px';
-                // カードに配置されている時は傾きを適用しない
-                cupCursor.style.transform = 'translate(-50%, -50%) rotate(0deg)';
-                
-                // グローバル変数も更新
-                cupX = targetScreenX;
-                cupY = targetScreenY;
-                
-                // 前回の値を更新
+
+                const updated = updateCupPositionRelativeToCard(cardElement, {
+                    cardRect,
+                    leftPercent,
+                    topPercent
+                });
+
+                if (!updated) {
+                    resetCupFromCard();
+                    return;
+                }
+
                 lastCardLeft = cardRect.left;
                 lastCardTop = cardRect.top;
                 lastCardWidth = cardRect.width;
@@ -795,6 +780,76 @@ function clampCupPosition(x, y) {
         
         scrollListener = handleScroll;
         resizeListener = handleResize;
+    }
+
+    function updateCupPositionRelativeToCard(cardElement, options = {}) {
+        if (!cupCursor || !cardElement) return false;
+
+        const cardRect = options.cardRect || cardElement.getBoundingClientRect();
+        if (!cardRect || (cardRect.width === 0 && cardRect.height === 0)) {
+            return false;
+        }
+
+        const cardStyle = options.cardStyle || window.getComputedStyle(cardElement);
+        const paddingLeft = parseFloat(cardStyle.paddingLeft) || 0;
+        const paddingTop = parseFloat(cardStyle.paddingTop) || 0;
+        const paddingRight = parseFloat(cardStyle.paddingRight) || 0;
+        const paddingBottom = parseFloat(cardStyle.paddingBottom) || 0;
+        const borderLeft = parseFloat(cardStyle.borderLeftWidth) || 0;
+        const borderTop = parseFloat(cardStyle.borderTopWidth) || 0;
+        const borderRight = parseFloat(cardStyle.borderRightWidth) || 0;
+        const borderBottom = parseFloat(cardStyle.borderBottomWidth) || 0;
+
+        const paddingBoxWidth = cardRect.width - borderLeft - borderRight - paddingLeft - paddingRight;
+        const paddingBoxHeight = cardRect.height - borderTop - borderBottom - paddingTop - paddingBottom;
+
+        if (paddingBoxWidth <= 0 || paddingBoxHeight <= 0) {
+            return false;
+        }
+
+        const paddingBoxLeft = cardRect.left + borderLeft + paddingLeft;
+        const paddingBoxTop = cardRect.top + borderTop + paddingTop;
+
+        const leftPercent = typeof options.leftPercent === 'number'
+            ? options.leftPercent
+            : parseFloat(CUP_POSITION_OFFSET.left) / 100;
+        const topPercent = typeof options.topPercent === 'number'
+            ? options.topPercent
+            : parseFloat(CUP_POSITION_OFFSET.top) / 100;
+
+        const targetCenterXInPaddingBox = paddingBoxWidth * leftPercent;
+        const targetCenterYInPaddingBox = paddingBoxHeight * topPercent;
+
+        const targetScreenX = paddingBoxLeft + targetCenterXInPaddingBox;
+        const targetScreenY = paddingBoxTop + targetCenterYInPaddingBox;
+
+        if (!Number.isFinite(targetScreenX) || !Number.isFinite(targetScreenY)) {
+            return false;
+        }
+
+        cupCursor.style.position = 'fixed';
+        cupCursor.style.left = `${targetScreenX}px`;
+        cupCursor.style.top = `${targetScreenY}px`;
+        cupCursor.style.transform = 'translate(-50%, -50%) rotate(0deg)';
+
+        cupX = targetScreenX;
+        cupY = targetScreenY;
+
+        return true;
+    }
+
+    function syncCupWithPlacedCard() {
+        if (!cupCursor || !cupPlacedOnCard || !placedCardElement) return;
+
+        if (!document.body.contains(placedCardElement)) {
+            resetCupFromCard();
+            return;
+        }
+
+        const updated = updateCupPositionRelativeToCard(placedCardElement);
+        if (!updated) {
+            resetCupFromCard();
+        }
     }
     
     // カップ位置の監視を停止
@@ -1889,6 +1944,14 @@ function clampCupPosition(x, y) {
         const filteredCatalog = selectedTag === null
             ? catalog
             : catalog.filter(item => item.tags.includes(selectedTag));
+
+        if (cupPlacedOnCard && currentPlayerCardId) {
+            const currentCardStillVisible = filteredCatalog.some(item => item.id === currentPlayerCardId);
+            if (!currentCardStillVisible) {
+                resetCupFromCard();
+            }
+        }
+
         const currentFilteredIds = new Set(filteredCatalog.map(item => item.id));
         // Get the CURRENT state of cards in the DOM right now
         const allCardElementsInDOM = Array.from(catalogContainer.querySelectorAll('.player-card'));
@@ -2030,6 +2093,8 @@ function clampCupPosition(x, y) {
                 }
             });
 
+            syncCupWithPlacedCard();
+
             // Animate remaining cards
             requestAnimationFrame(() => { // Ensure layout updated after removal
                 if (executionId !== currentLoadCatalogExecutionId) return; // Check again
@@ -2070,6 +2135,7 @@ function clampCupPosition(x, y) {
                                 if (event.propertyName === 'transform' && card.classList.contains('flipping') && executionId === currentLoadCatalogExecutionId) {
                                     console.log(`(ID: ${executionId}) FLIP Cleanup: Card ${card.id}`);
                                     card.classList.remove('flipping');
+                                    syncCupWithPlacedCard();
                                 } else if (executionId !== currentLoadCatalogExecutionId) {
                                      console.log(`(ID: ${executionId}) Stale FLIP cleanup listener ignored for card ${card.id}`);
                                 }
@@ -2079,6 +2145,8 @@ function clampCupPosition(x, y) {
                 } else {
                     console.log(`(ID: ${executionId}) FLIP: No cards needed position animation after removals.`);
                 }
+
+                syncCupWithPlacedCard();
             });
 
         }).catch(error => {
