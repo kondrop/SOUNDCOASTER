@@ -1692,6 +1692,8 @@ function clampCupPosition(x, y) {
         // カップをカードに移動させる
         const cardElement = document.getElementById(item.id);
         if (cardElement && cupCursor) {
+            // 既存のトラッキングを停止してから新しいカードへ移動
+            stopCupPositionTracking();
             moveCupToCard(cardElement, () => {
                 // カップがカードに到達した後に再生処理を実行
                 executePlayback(item);
@@ -1770,9 +1772,6 @@ function clampCupPosition(x, y) {
                 deactivateCard(currentPlayerCardId);
             }
             stopSoundBars(); // Stop catalog card animation
-            
-            // 前のカードのカップ位置トラッキングを停止
-            stopCupPositionTracking();
 
             currentPlayerCardId = item.id;
             currentVideoId = item.videoId;

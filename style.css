@@ -56,7 +56,7 @@
   --volume-icon-size: 32px;       /* 音量アイコンのサイズ */
   --title-font-size: 80px;        /* メインタイトルのフォントサイズ */
   --track-title-size: 15px;       /* トラックタイトルのフォントサイズ */
-  --track-artist-size: 12px;      /* アーティスト名のフォントサイズ */
+  --track-artist-size: 11px;      /* アーティスト名のフォントサイズ */
   --current-track-title-size: 16px; /* 現在再生中のトラックタイトルサイズ */
   --current-track-artist-size: 14px; /* 現在再生中のアーティスト名サイズ */
   --current-track-width: 300px;   /* 現在再生中のトラック情報の幅 */
@@ -105,6 +105,7 @@
     padding: var(--player-card-padding);
     text-align: center;
     position: relative;
+    overflow: hidden;
     cursor: none; /* カスタムカーソルを使用 */
     /* transition: all 0.3s ease; */ /* 一般的なトランジションを削除 */
     width: var(--player-card-width);
@@ -113,6 +114,7 @@
     align-items: center;
     height: auto;
     box-shadow: none;
+    z-index: 0;
     /* デフォルトのテキストカラーを削除 */
     transition: transform 600ms cubic-bezier(0.3, 0, 0.1, 1),
             box-shadow 600ms cubic-bezier(0.3, 0, 0.1, 1),
@@ -128,6 +130,42 @@
     box-shadow: none;
 }
 
+.player-card::before {
+    content: "";
+    position: absolute;
+    top: 37%;
+    left: 50%;
+    width: 220%;
+    height: 220%;
+    background-color: var(--primary-color);
+    border-radius: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    transform-origin: center;
+    transition: transform 800ms cubic-bezier(0.3, 0, 0.1, 1),
+                opacity 800ms cubic-bezier(0.3, 0, 0.1, 1);
+    opacity: 0.0;
+    z-index: -2;
+}
+
+.player-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 300ms cubic-bezier(0.3, 0, 0.1, 1),
+                box-shadow 300ms cubic-bezier(0.3, 0, 0.1, 1);
+    z-index: -1;
+}
+
+.player-card:hover::after {
+    opacity: 1;
+    box-shadow:
+        inset 0 0 18px rgba(244, 233, 224, 0.2),
+        inset 0 0 36px rgba(244, 233, 224, 0.12);
+}
+
 .player-card:hover .track-info * {
     color: var(--primary-color); /* ホバー時にテキストをプライマリカラーに */
 }
@@ -139,7 +177,19 @@
 }
 
 .player-card.playing {
-    background-color: var(--primary-color);
+    background-color: transparent;
+}
+
+.player-card.playing::before {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+}
+
+.player-card.playing::after {
+    opacity: 1;
+    box-shadow:
+        inset 0 0 20px rgba(244, 233, 224, 0.30),
+        inset 0 0 45px rgba(244, 233, 224, 0.15);
 }
 
 .player-card.playing .track-info * {
@@ -548,26 +598,33 @@
 
 /* タグボタン */
 .tag-button {
-  background-color: var(--transparent);
-  color: var(--text-color-light); /* テキスト色を白に変更 */
-  border: 1px solid var(--text-color-light); /* 枠線も白に変更 */
-  border-radius: 9999px; /* 完全に丸めて pill 状に */
-  padding: var(--tag-button-padding); /* 上下・左右の余白 */
-  font-size: var(--tag-button-font-size); /* フォント大きめ */
-  font-weight: 600; /* 太字気味 */
-  line-height: 1; /* 縦詰まり防止 */
-  cursor: none; /* カスタムカーソルを使用 */
-  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 6px 10px 7px 10px;
+  background-color: rgba(244, 233, 224, 0.1);
+  color: var(--text-color-light);
+  border: none;
+  border-radius: 29px;
+  font-size: var(--tag-button-font-size);
+  font-weight: 600;
+  line-height: 1;
+  box-shadow: inset 0 0 8px 0 rgba(255, 255, 255, 0.15);
+  cursor: none;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 
 .tag-button:hover {
-    background-color: var(--background-color-hover-light); /* ホバー時に少し暗いグレー */
+  background-color: rgba(244, 233, 224, 0.2);
+  box-shadow: inset 0 0 10px 0 rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
 }
 
 .tag-button.active {
-    background-color: var(--primary-color); /* アクティブタグにチャートリューズ */
-    color: var(--text-color-light); /* アクティブタグにネイビーブルーテキスト */
-    border-color: var(--primary-color); /* ボーダーの色がアクティブ背景と一致するように */
+  background-color: rgba(244, 233, 224, 0.4);
+  color: var(--text-color-light);
+  box-shadow: inset 0 0 12px 0 rgba(255, 255, 255, 0.3);
 }
 
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Noto+Sans+JP:wght@700&display=swap');
@@ -593,8 +650,9 @@ body {
     position: fixed;
     width: 8px; /* 小さな円のサイズ */
     height: 8px;
-    background-color: var(--primary-color); /* キーカラー */
+    background-color: rgba(244, 233, 224, 0.4); /* デフォルトカーソル色（半透明） */
     border-radius: 50%; /* 円形 */
+    box-shadow: inset 0 0 4px rgba(244, 233, 224, 0.45); /* 内側の影 */
     pointer-events: none; /* クリックイベントを透過 */
     z-index: 10001; /* 最前面に表示（カップより上） */
     transform: translate(-50%, -50%) scale(1); /* 中心をカーソル位置に、初期スケール */
@@ -608,6 +666,8 @@ body {
     width: 32px;
     height: 32px;
     transform: translate(-50%, -50%) scale(1);
+    background-color: rgba(244, 233, 224, 0.15); /* ホバー時は淡い色 */
+    box-shadow: inset 0 0 10px rgba(244, 233, 224, 0.4); /* ホバー時は少し強めに */
 }
 
 .title-container {
@@ -866,7 +926,7 @@ body {
     width: 100px; /* カップのサイズ */
     height: auto;
     pointer-events: none; /* クリックイベントを透過 */
-    z-index: 10000; /* 最前面に表示 */
+    z-index: 950; /* 下部レコードの背面に回すがカード上では表示 */
     transform: translate(-50%, -50%); /* 中心をカーソル位置に */
     transition: transform 0.1s ease-out; /* スムーズに追従 */
     opacity: 1;
