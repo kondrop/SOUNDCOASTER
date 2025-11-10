@@ -85,7 +85,7 @@
 
 .catalog-container {
     max-width: var(--container-max-width);
-    margin: 10 auto;
+    margin: 10px auto;
     display: flex; /* Flexboxを使用 */
     flex-wrap: wrap; /* 折り返しを許可 */
     column-gap: var(--card-gap); /* カード間のスペース */
@@ -105,7 +105,7 @@
     padding: var(--player-card-padding);
     text-align: center;
     position: relative;
-    cursor: pointer;
+    cursor: none; /* カスタムカーソルを使用 */
     /* transition: all 0.3s ease; */ /* 一般的なトランジションを削除 */
     width: var(--player-card-width);
     display: flex;
@@ -534,9 +534,6 @@
     margin: 0;
 }
 
-#catalog-container {
-}
-
 /* タグフィルターコンテナ */
 .tag-filter-container {
     max-width: var(--container-max-width);
@@ -559,7 +556,7 @@
   font-size: var(--tag-button-font-size); /* フォント大きめ */
   font-weight: 600; /* 太字気味 */
   line-height: 1; /* 縦詰まり防止 */
-  cursor: pointer;
+  cursor: none; /* カスタムカーソルを使用 */
   transition: all 0.2s ease;
 }
 
@@ -588,6 +585,29 @@ body {
     background-attachment: fixed;
     padding-bottom: var(--page-bottom-padding);
     min-height: 100vh;
+    cursor: none; /* デフォルトのカーソルを非表示 */
+}
+
+/* カスタムマウスカーソル（小さな円） */
+#custom-cursor {
+    position: fixed;
+    width: 8px; /* 小さな円のサイズ */
+    height: 8px;
+    background-color: var(--primary-color); /* キーカラー */
+    border-radius: 50%; /* 円形 */
+    pointer-events: none; /* クリックイベントを透過 */
+    z-index: 10001; /* 最前面に表示（カップより上） */
+    transform: translate(-50%, -50%) scale(1); /* 中心をカーソル位置に、初期スケール */
+    transition: transform 0.2s ease-out, width 0.2s ease-out, height 0.2s ease-out; /* スムーズに追従とサイズ変更 */
+    opacity: 1;
+    display: block;
+}
+
+/* ホバー時にカーソルが大きくなる */
+#custom-cursor.hover {
+    width: 32px;
+    height: 32px;
+    transform: translate(-50%, -50%) scale(1);
 }
 
 .title-container {
@@ -669,10 +689,6 @@ body {
     transform: translate(-50%, -50%);
 }
 
-.song-info {
-    /* スタイルを調整 */
-}
-
 .song-title {
     font-weight: bold;
     font-size: 1rem;
@@ -709,7 +725,7 @@ body {
     width: 100%; /* 幅を100%に */
     height: var(--seek-bar-height); /* 高さを設定 */
     background: var(--transparent); /* 背景色を透明に */
-    cursor: pointer; /* カーソルをポインターに */
+    cursor: none; /* カスタムカーソルを使用 */
 }
 
 /* スライダーのトラック */
@@ -733,7 +749,7 @@ body {
     height: var(--seek-thumb-size); /* サムのサイズを設定 */
     background: var(--primary-color); /* サムの色を設定 */
     border-radius: 50%; /* サムを円形に */
-    cursor: pointer; /* カーソルをポインターに */
+    cursor: none; /* カスタムカーソルを使用 */
     opacity: 0;
 }
 
@@ -742,7 +758,7 @@ body {
     height: var(--seek-thumb-size); /* サムのサイズを設定 */
     background: var(--primary-color); /* サムの色を設定 */
     border-radius: 50%; /* サムを円形に */
-    cursor: pointer; /* カーソルをポインターに */
+    cursor: none; /* カスタムカーソルを使用 */
     opacity: 0;
 }
 
@@ -760,7 +776,7 @@ body {
     width: 40px; /* コンテナ幅 */
     height: auto; /* 高さはコンテンツに合わせる */
     z-index: 1001;
-    cursor: pointer; /* コンテナ全体を掴めるように */
+    cursor: none; /* カスタムカーソルを使用 */
 }
 
 /* アイコン共通スタイル */
@@ -817,7 +833,7 @@ body {
     background-color: var(--volume-active-color); /* サムの色 */
     border-radius: 50%;
     transform: translate(-50%, -50%) scale(1); /* 自身の中心を基点に、初期スケール */
-    cursor: grab;
+    cursor: none; /* カスタムカーソルを使用 */
     transition: transform 300ms cubic-bezier(0.0, 0, 0.1, 1); /* transformプロパティに対するトランジション */
 }
 
@@ -828,7 +844,7 @@ body {
 }
 
 #volume-thumb:active {
-    cursor: grabbing;
+    cursor: none; /* カスタムカーソルを使用 */
 }
 
 /* クリックスパークキャンバス */
@@ -842,6 +858,35 @@ body {
     z-index: 9999; /* 他の要素より手前に表示 */
     display: block; /* canvasのデフォルト余白を消す */
     user-select: none; /* テキスト選択などを防ぐ */
+}
+
+/* カップマウスストーカー */
+#cup-cursor {
+    position: fixed;
+    width: 100px; /* カップのサイズ */
+    height: auto;
+    pointer-events: none; /* クリックイベントを透過 */
+    z-index: 10000; /* 最前面に表示 */
+    transform: translate(-50%, -50%); /* 中心をカーソル位置に */
+    transition: transform 0.1s ease-out; /* スムーズに追従 */
+    opacity: 1;
+    display: block;
+}
+
+/* カップがカードに移動する時のアニメーション */
+#cup-cursor.moving-to-card {
+    transition: left 0.5s cubic-bezier(0.3, 0, 0.1, 1), top 0.5s cubic-bezier(0.3, 0, 0.1, 1);
+}
+
+/* カップがabsoluteポジションに変更され、最終位置に移動する時のアニメーション */
+#cup-cursor.placing-to-final {
+    transition: left 0.5s cubic-bezier(0.3, 0, 0.1, 1), top 0.5s cubic-bezier(0.3, 0, 0.1, 1), transform 0.5s cubic-bezier(0.3, 0, 0.1, 1);
+}
+
+/* カップがカードに到達した後（配置されたまま） */
+#cup-cursor.placed {
+    opacity: 1;
+    transition: opacity 0.3s ease-out;
 }
 
 /* FLIPアニメーション用のルール */
@@ -878,7 +923,7 @@ body {
   border-radius: 50%;
   background-color: var(--text-color-light);
   border: none;
-  cursor: pointer;
+  cursor: none; /* カスタムカーソルを使用 */
   display: flex;
   align-items: center;
   justify-content: center;

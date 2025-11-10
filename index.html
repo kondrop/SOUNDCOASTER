@@ -9,6 +9,10 @@
 </head>
 <body>
     <canvas id="click-spark-canvas"></canvas>
+    <!-- カスタムマウスカーソル（小さな円） -->
+    <div id="custom-cursor"></div>
+    <!-- マウスストーカー用のカップ -->
+    <img id="cup-cursor" src="images/cup.png" alt="cup cursor" style="display: none;">
     <div class="title-container">
         <h1 class="main-title">SOUND<span class="record-part">COASTER</span></h1>
         
@@ -90,6 +94,8 @@
     </div>
       
 
+    <!-- GSAP Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
     <!-- YouTube IFrame API Loader Script (Keep this in HTML) -->
     <script src="https://www.youtube.com/iframe_api"></script>
     <!-- Link to the external JavaScript file (Defer ensures HTML is parsed first) -->

@@ -22,7 +22,7 @@
     // const ROTATION_SENSITIVITY = 1.5; // How much rotation translates to seeking - Let's define a new one for visual rotation
     const VISUAL_ROTATION_SENSITIVITY = 0.8; // Sensitivity for visual rotation based on drag distance (degrees per pixel)
     const SEEK_SENSITIVITY = 8; // Degrees of rotation per second of video seek (Lowered from 60, might need further adjustment)
-    const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwoMPMpYIdjGeX3pN4nA0mXi5pR5zbUuiq78gcfxux_4nz5TaHjW5ezQjEdCVoi7Q/exec'; // New Google Apps Script URL
+    const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycby1xQlBqOgEkEV3f_pGsFid4CuiS7dBH-YJYYESIlMcoeG2h_buSPxlFXetfo2H-IE/exec'; // New Google Apps Script URL
 
     // 再生モード変数を追加
     const PLAYBACK_MODE = {
@@ -57,6 +57,14 @@
     let playbackControlContainer = null;
     let sequentialPlaybackBtn = null;
     let randomPlaybackBtn = null;
+    // カップマウスストーカー要素
+    let cupCursor = null;
+    // カスタムマウスカーソル要素
+    let customCursor = null;
+    let customCursorMoveHandlerAttached = false;
+    let customCursorMoveHandlerRef = null;
+    let cupResizeHandlerAttached = false;
+    let cupResizeHandlerRef = null;
 
     // --- Scratch Interaction Variables ---
     let isDraggingDisc = false;
@@ -247,6 +255,10 @@
         playbackControlContainer = document.getElementById('playback-control-container');
         sequentialPlaybackBtn = document.getElementById('sequential-playback-btn');
         randomPlaybackBtn = document.getElementById('random-playback-btn');
+        // カップマウスストーカー要素を取得
+        cupCursor = document.getElementById('cup-cursor');
+        // カスタムマウスカーソル要素を取得
+        customCursor = document.getElementById('custom-cursor');
 
         // Check all necessary elements
         if (!catalogContainer || !tagFilterContainer || !bottomPlayerContainer || !largeDiscContainer || !largeThumbnail || !largeDisc || !currentTrackInfoDiv || !currentTrackTitleDiv || !currentTrackArtistDiv || !currentTrackGenreDiv || !globalErrorDiv || !seekBarContainer || !seekBar || !currentTimeDisplay || !durationDisplay || !volumeSliderContainer || !volumeTrack || !volumeThumb || !playbackControlContainer || !sequentialPlaybackBtn || !randomPlaybackBtn) { // ★ Check custom volume elements
@@ -256,12 +268,588 @@
             addScratchListeners();
             addSeekBarListeners(); // Add listeners for the seek bar
             addPlaybackModeListeners(); // 再生モードリスナーを追加
+            initializeCupCursor(); // カップマウスストーカーの初期化
+            initializeCustomCursor(); // カスタムマウスカーソルの初期化
             // Custom volume listener setup is done in onPlayerReady
         }
     }
 
     // Call initialization when the DOM is ready
     document.addEventListener('DOMContentLoaded', initializeDOMElements);
+
+    // --- カップマウスストーカー機能 ---
+    let isMovingToCard = false; // グローバルフラグ
+    let cupPlacedOnCard = false; // カップがカード上に配置されているか
+    let placedCardElement = null; // カップが配置されているカード要素
+    // 再生中や配置後にマウス追従を完全停止させるロック
+    let cupLockedToCard = false;
+    let isLoadingNewTrack = false; // 新しいトラックの読み込み中フラグ（チラつき防止用）
+    // カップの配置位置オフセット（カード内での位置調整用）
+    const CUP_POSITION_OFFSET = {
+        left: '53%',   // 左位置（デフォルト: 中央）
+        top: '25%',    // 上位置（少し上に上げました）
+        translateX: '-50%', // X方向の変換（デフォルト: 中央揃え）
+        translateY: '-50%'   // Y方向の変換（デフォルト: 中央揃え）
+    };
+    let scrollListener = null; // スクロールリスナー
+    let resizeListener = null; // リサイズリスナー
+    let cupX = 0; // カップのX座標（グローバル）
+    let cupY = 0; // カップのY座標（グローバル）
+    let cupAnimationFrameId = null; // アニメーションフレームID（停止用）
+    // mousemove リスナーの参照（detach/attach 用に保持）
+    let onDocMouseMoveRef = null;
+    // fixed positionでカードに固定する際の監視用
+    let cupPositionUpdateInterval = null; // カップ位置更新用のinterval
+    // カップの傾き用の変数
+    let previousMouseX = 0; // 前回のマウスX座標
+    let cupRotation = 0; // カップの現在の傾き角度（度）
+    let targetRotation = 0; // 目標の傾き角度
+
+let cupMouseMoveAttached = false;
+
+// カードが absolutely-positioned な子要素を受け入れられるように（保険）
+function ensureCardPositioning(cardEl) {
+    const cs = window.getComputedStyle(cardEl);
+    if (cs.position === 'static' || !cs.position) {
+        cardEl.style.position = 'relative';
+    }
+}
+
+function clampCupPosition(x, y) {
+    if (!catalogContainer) {
+        return { x, y };
+    }
+
+    const rect = catalogContainer.getBoundingClientRect();
+    const cupWidth = cupCursor ? cupCursor.offsetWidth : 100;
+    const cupHeight = cupCursor ? cupCursor.offsetHeight : 100;
+    const halfWidth = cupWidth / 2;
+    const halfHeight = cupHeight / 2;
+
+    let minX = rect.left + halfWidth;
+    let maxX = rect.right - halfWidth;
+    let minY = rect.top + halfHeight;
+    let maxY = rect.bottom - halfHeight;
+
+    if (minX > maxX) {
+        const centerX = rect.left + rect.width / 2;
+        minX = maxX = centerX;
+    }
+    if (minY > maxY) {
+        const centerY = rect.top + rect.height / 2;
+        minY = maxY = centerY;
+    }
+
+    const clampedX = Math.min(maxX, Math.max(minX, x));
+    const clampedY = Math.min(maxY, Math.max(minY, y));
+
+    return { x: clampedX, y: clampedY };
+}
+
+    // --- mousemove ハンドラ（グローバル定義：removeEventListener可能にする） ---
+    function onDocMouseMove(e) {
+        const rawMouseX = e.clientX;
+        const rawMouseY = e.clientY;
+        const { x: targetMouseX, y: targetMouseY } = clampCupPosition(rawMouseX, rawMouseY);
+        window.mouseX = targetMouseX;
+        window.mouseY = targetMouseY;
+
+        // ロック中/移動中/再生中に配置済みなら追従を停止
+        if (cupLockedToCard || isMovingToCard || (isPlaying && cupPlacedOnCard)) {
+            if (cupAnimationFrameId !== null) {
+                cancelAnimationFrame(cupAnimationFrameId);
+                cupAnimationFrameId = null;
+            }
+            return;
+        }
+
+        // マウスの横方向の動きを検出して傾き角度を計算
+        const deltaX = targetMouseX - previousMouseX;
+        // 画面幅に対する移動量の割合に基づいて傾きを計算（最大30度まで）
+        const maxRotation = 30; // 最大傾き角度
+        const sensitivity = 0.6; // 感度調整
+        targetRotation = Math.max(-maxRotation, Math.min(maxRotation, deltaX * sensitivity));
+        previousMouseX = targetMouseX;
+
+        function updateCupPosition() {
+            if (cupLockedToCard || isMovingToCard || (isPlaying && cupPlacedOnCard)) {
+                cupAnimationFrameId = null;
+                return;
+            }
+            cupX += (targetMouseX - cupX) * 0.2;
+            cupY += (targetMouseY - cupY) * 0.2;
+            
+            // 傾き角度をスムーズに更新
+            cupRotation += (targetRotation - cupRotation) * 0.15;
+            
+            if (cupCursor) {
+                cupCursor.style.left = cupX + 'px';
+                cupCursor.style.top = cupY + 'px';
+                // transformにtranslateとrotateを組み合わせる
+                cupCursor.style.transform = `translate(-50%, -50%) rotate(${cupRotation}deg)`;
+            }
+            
+            // 目標角度に近づいたら傾きを徐々に戻す
+            if (Math.abs(targetRotation) > 0.1) {
+                targetRotation *= 0.95; // 徐々に0に近づける
+            } else {
+                targetRotation = 0;
+            }
+            
+            if (Math.abs(targetMouseX - cupX) > 0.1 || Math.abs(targetMouseY - cupY) > 0.1 || Math.abs(cupRotation) > 0.1) {
+                cupAnimationFrameId = requestAnimationFrame(updateCupPosition);
+            } else {
+                cupAnimationFrameId = null;
+            }
+        }
+
+        if (cupAnimationFrameId !== null) {
+            cancelAnimationFrame(cupAnimationFrameId);
+        }
+        cupAnimationFrameId = requestAnimationFrame(updateCupPosition);
+    }
+
+    function attachCupMouseMove() {
+        if (cupMouseMoveAttached) return;
+        onDocMouseMoveRef = onDocMouseMove;
+        document.addEventListener('mousemove', onDocMouseMoveRef);
+        cupMouseMoveAttached = true;
+    }
+
+    function detachCupMouseMove() {
+        if (!cupMouseMoveAttached) return;
+        if (onDocMouseMoveRef) {
+            document.removeEventListener('mousemove', onDocMouseMoveRef);
+            onDocMouseMoveRef = null;
+        }
+        cupMouseMoveAttached = false;
+        if (cupAnimationFrameId !== null) {
+            cancelAnimationFrame(cupAnimationFrameId);
+            cupAnimationFrameId = null;
+        }
+    }
+
+    function initializeCupCursor() {
+        if (!cupCursor) {
+            console.warn("Cup cursor element not found.");
+            return;
+        }
+
+        // 初期位置を設定
+        cupCursor.style.display = 'block';
+        cupCursor.style.position = 'fixed';
+        cupCursor.style.transform = 'translate(-50%, -50%) rotate(0deg)';
+        cupX = window.innerWidth / 2;
+        cupY = window.innerHeight / 2;
+        const { x: initialClampedX, y: initialClampedY } = clampCupPosition(cupX, cupY);
+        cupX = initialClampedX;
+        cupY = initialClampedY;
+        cupCursor.style.left = cupX + 'px';
+        cupCursor.style.top = cupY + 'px';
+        window.mouseX = cupX;
+        window.mouseY = cupY;
+        previousMouseX = cupX; // 初期化時に前回のマウスX座標を設定
+        cupRotation = 0; // 初期傾き角度を0に
+        targetRotation = 0; // 目標角度も0に
+
+        if (!cupResizeHandlerAttached) {
+            cupResizeHandlerRef = () => {
+                if (!cupCursor || cupLockedToCard || cupPlacedOnCard || isMovingToCard) {
+                    return;
+                }
+                const { x: clampedX, y: clampedY } = clampCupPosition(cupX, cupY);
+                cupX = clampedX;
+                cupY = clampedY;
+                cupCursor.style.left = cupX + 'px';
+                cupCursor.style.top = cupY + 'px';
+                window.mouseX = cupX;
+                window.mouseY = cupY;
+            };
+            window.addEventListener('resize', cupResizeHandlerRef, { passive: true });
+            cupResizeHandlerAttached = true;
+        }
+
+        // 初期は追従を有効化
+        attachCupMouseMove();
+
+        console.log("Cup cursor initialized.");
+    }
+
+    function initializeCustomCursor() {
+        if (!customCursor) {
+            console.warn("Custom cursor element not found.");
+            return;
+        }
+
+        // 初期位置を設定（画面中央）
+        const initialX = window.innerWidth / 2;
+        const initialY = window.innerHeight / 2;
+        const { x: initialCustomClampedX, y: initialCustomClampedY } = clampCupPosition(initialX, initialY);
+        customCursor.style.left = initialX + 'px';
+        customCursor.style.top = initialY + 'px';
+        customCursor.style.display = 'block';
+        window.mouseX = initialCustomClampedX;
+        window.mouseY = initialCustomClampedY;
+
+        if (!customCursorMoveHandlerAttached) {
+            customCursorMoveHandlerRef = (event) => {
+                const x = event.clientX;
+                const y = event.clientY;
+                const { x: clampedX, y: clampedY } = clampCupPosition(x, y);
+                window.mouseX = clampedX;
+                window.mouseY = clampedY;
+                customCursor.style.left = x + 'px';
+                customCursor.style.top = y + 'px';
+            };
+            document.addEventListener('mousemove', customCursorMoveHandlerRef, { passive: true });
+            customCursorMoveHandlerAttached = true;
+        }
+
+        // ホバー可能な要素を検出してカーソルを大きくする
+        const hoverableSelectors = [
+            'button',
+            'a',
+            '.player-card',
+            '.tag-button',
+            '#seek-bar',
+            '#volume-slider-container',
+            '.playback-control-button',
+            'input[type="range"]'
+        ];
+
+        // ホバー可能な要素を検出する関数
+        function isHoverableElement(element) {
+            if (!element) return false;
+            return hoverableSelectors.some(selector => {
+                return element.matches(selector) || element.closest(selector);
+            });
+        }
+
+        // ホバー可能な要素にマウスオーバー/アウトイベントを追加
+        document.addEventListener('mouseover', (e) => {
+            const target = e.target;
+            if (isHoverableElement(target) && customCursor) {
+                customCursor.classList.add('hover');
+            }
+        });
+
+        document.addEventListener('mouseout', (e) => {
+            const target = e.target;
+            const relatedTarget = e.relatedTarget;
+            
+            // ホバー可能な要素から出た時、かつ移動先がホバー可能でない場合のみクラスを削除
+            if (isHoverableElement(target) && !isHoverableElement(relatedTarget) && customCursor) {
+                customCursor.classList.remove('hover');
+            }
+        });
+
+        console.log("Custom cursor initialized.");
+    }
+
+    function moveCupToCard(cardElement, callback) {
+        if (!cupCursor || !cardElement) {
+            if (callback) callback();
+            return;
+        }
+
+        // 既存のアニメーションフレームをキャンセル
+        if (cupAnimationFrameId !== null) {
+            cancelAnimationFrame(cupAnimationFrameId);
+            cupAnimationFrameId = null;
+        }
+
+        isMovingToCard = true; // フラグを設定
+        isLoadingNewTrack = true; // 新しいトラックの読み込み開始
+
+        const cardRect = cardElement.getBoundingClientRect();
+        const cardStyle = window.getComputedStyle(cardElement);
+        
+        // padding-box基準のサイズを計算（absoluteポジションの%はpadding-box基準）
+        const paddingLeft = parseFloat(cardStyle.paddingLeft) || 0;
+        const paddingTop = parseFloat(cardStyle.paddingTop) || 0;
+        const paddingRight = parseFloat(cardStyle.paddingRight) || 0;
+        const paddingBottom = parseFloat(cardStyle.paddingBottom) || 0;
+        const borderLeft = parseFloat(cardStyle.borderLeftWidth) || 0;
+        const borderTop = parseFloat(cardStyle.borderTopWidth) || 0;
+        
+        // padding-box基準のサイズ（getBoundingClientRectはborder-box基準）
+        const paddingBoxWidth = cardRect.width - borderLeft - parseFloat(cardStyle.borderRightWidth || 0) - paddingLeft - paddingRight;
+        const paddingBoxHeight = cardRect.height - borderTop - parseFloat(cardStyle.borderBottomWidth || 0) - paddingTop - paddingBottom;
+        
+        // padding-box基準の左上座標（画面座標）
+        const paddingBoxLeft = cardRect.left + borderLeft + paddingLeft;
+        const paddingBoxTop = cardRect.top + borderTop + paddingTop;
+        
+        // CUP_POSITION_OFFSETを考慮して最終的な配置位置を計算
+        // パーセンテージをピクセル値に変換
+        const leftPercent = parseFloat(CUP_POSITION_OFFSET.left) / 100;
+        const topPercent = parseFloat(CUP_POSITION_OFFSET.top) / 100;
+        
+        // padding-box基準での位置を計算
+        // 固定後のCSSでは left: 53% がカップの中心点になる（translate(-50%, -50%)が適用されるため）
+        // したがって、移動時も同じ位置（padding-box幅 × 53%）に移動すれば一致する
+        const targetCenterXInPaddingBox = paddingBoxWidth * leftPercent;
+        const targetCenterYInPaddingBox = paddingBoxHeight * topPercent;
+        
+        // 画面座標に変換（padding-box基準の左上 + カード内での中心点位置）
+        // fixed positionでtranslate(-50%, -50%)が適用されるため、中心点を指定
+        const targetScreenX = paddingBoxLeft + targetCenterXInPaddingBox;
+        const targetScreenY = paddingBoxTop + targetCenterYInPaddingBox;
+        
+        // デバッグログ
+        console.log('=== moveCupToCard 位置計算 ===');
+        console.log('cardRect:', { width: cardRect.width, height: cardRect.height, left: cardRect.left, top: cardRect.top });
+        console.log('padding-box:', { width: paddingBoxWidth, height: paddingBoxHeight, left: paddingBoxLeft, top: paddingBoxTop });
+        console.log('CUP_POSITION_OFFSET:', CUP_POSITION_OFFSET);
+        console.log('targetCenter (padding-box):', { x: targetCenterXInPaddingBox, y: targetCenterYInPaddingBox });
+        console.log('targetScreen:', { x: targetScreenX, y: targetScreenY });
+
+        // マウス追従を停止（アニメーション中は追従しない）
+        cupLockedToCard = true;
+
+        // 現在の位置を取得
+        const currentRect = cupCursor.getBoundingClientRect();
+        const currentCenterX = currentRect.left + currentRect.width / 2;
+        const currentCenterY = currentRect.top + currentRect.height / 2;
+        
+        // 傾きをリセット
+        cupRotation = 0;
+        targetRotation = 0;
+        
+        // GSAPでfixed positionから目標位置まで移動
+        gsap.to(cupCursor, {
+            left: targetScreenX + 'px',
+            top: targetScreenY + 'px',
+            rotation: 0, // 傾きも0に戻す
+            duration: 0.5,
+            ease: 'power2.out',
+            onComplete: () => {
+                cupCursor.classList.add('placed');
+                cupPlacedOnCard = true; // カップがカード上に配置されたことを記録
+                placedCardElement = cardElement; // カード要素を保存
+                cupLockedToCard = true; // マウス追従を完全停止
+                
+                // 追従イベントを完全解除
+                detachCupMouseMove();
+                
+                // 移動中フラグを解除
+                isMovingToCard = false;
+                
+                // fixed positionのまま、カードの位置変更を監視して位置を更新
+                startCupPositionTracking(cardElement);
+                
+                // 再生が開始されたらコールバックを実行
+                if (callback) callback();
+            }
+        });
+        
+        // グローバル変数も更新
+        cupX = targetScreenX;
+        cupY = targetScreenY;
+    }
+
+    // カップをアニメなしでカードの中心へ即座に配置（fixed position方式）
+    function moveCupInstantToCard(cardElement) {
+        if (!cupCursor || !cardElement) return;
+
+        // カードの位置を取得してカップの位置を計算
+        const cardRect = cardElement.getBoundingClientRect();
+        const cardStyle = window.getComputedStyle(cardElement);
+        const paddingLeft = parseFloat(cardStyle.paddingLeft) || 0;
+        const paddingTop = parseFloat(cardStyle.paddingTop) || 0;
+        const borderLeft = parseFloat(cardStyle.borderLeftWidth) || 0;
+        const borderTop = parseFloat(cardStyle.borderTopWidth) || 0;
+        
+        // padding-box基準のサイズと位置を計算
+        const paddingBoxWidth = cardRect.width - borderLeft - parseFloat(cardStyle.borderRightWidth || 0) - paddingLeft - parseFloat(cardStyle.paddingRight || 0);
+        const paddingBoxHeight = cardRect.height - borderTop - parseFloat(cardStyle.borderBottomWidth || 0) - paddingTop - parseFloat(cardStyle.paddingBottom || 0);
+        const paddingBoxLeft = cardRect.left + borderLeft + paddingLeft;
+        const paddingBoxTop = cardRect.top + borderTop + paddingTop;
+        
+        // カップの中心位置を計算
+        const leftPercent = parseFloat(CUP_POSITION_OFFSET.left) / 100;
+        const topPercent = parseFloat(CUP_POSITION_OFFSET.top) / 100;
+        const targetCenterXInPaddingBox = paddingBoxWidth * leftPercent;
+        const targetCenterYInPaddingBox = paddingBoxHeight * topPercent;
+        const targetScreenX = paddingBoxLeft + targetCenterXInPaddingBox;
+        const targetScreenY = paddingBoxTop + targetCenterYInPaddingBox;
+
+        // 傾きをリセット
+        cupRotation = 0;
+        targetRotation = 0;
+        
+        // fixed positionで即座に配置
+        cupCursor.style.position = 'fixed';
+        cupCursor.style.left = targetScreenX + 'px';
+        cupCursor.style.top = targetScreenY + 'px';
+        cupCursor.style.transform = 'translate(-50%, -50%) rotate(0deg)';
+
+        cupCursor.classList.add('placed');
+        cupPlacedOnCard = true;
+        placedCardElement = cardElement;
+        cupLockedToCard = true;
+
+        // マウス追従を完全停止
+        detachCupMouseMove();
+        
+        // fixed positionのまま、カードの位置変更を監視して位置を更新
+        startCupPositionTracking(cardElement);
+    }
+
+    // fixed positionのまま、カードの位置変更を監視してカップの位置を更新
+    function startCupPositionTracking(cardElement) {
+        // 既存の監視を停止
+        stopCupPositionTracking();
+        
+        // カード内での相対位置（padding-box基準）を保存
+        const leftPercent = parseFloat(CUP_POSITION_OFFSET.left) / 100;
+        const topPercent = parseFloat(CUP_POSITION_OFFSET.top) / 100;
+        
+        // 前回の位置を保存（変更があった時だけ更新）
+        let lastCardLeft = 0;
+        let lastCardTop = 0;
+        let lastCardWidth = 0;
+        let lastCardHeight = 0;
+        
+        // カップの位置を更新する関数
+        const updatePosition = () => {
+            if (!cupCursor || !cardElement || !cupPlacedOnCard) {
+                stopCupPositionTracking();
+                return;
+            }
+            
+            const cardRect = cardElement.getBoundingClientRect();
+            const cardStyle = window.getComputedStyle(cardElement);
+            const paddingLeft = parseFloat(cardStyle.paddingLeft) || 0;
+            const paddingTop = parseFloat(cardStyle.paddingTop) || 0;
+            const borderLeft = parseFloat(cardStyle.borderLeftWidth) || 0;
+            const borderTop = parseFloat(cardStyle.borderTopWidth) || 0;
+            
+            // padding-box基準のサイズと位置を計算
+            const paddingBoxWidth = cardRect.width - borderLeft - parseFloat(cardStyle.borderRightWidth || 0) - paddingLeft - parseFloat(cardStyle.paddingRight || 0);
+            const paddingBoxHeight = cardRect.height - borderTop - parseFloat(cardStyle.borderBottomWidth || 0) - paddingTop - parseFloat(cardStyle.paddingBottom || 0);
+            const paddingBoxLeft = cardRect.left + borderLeft + paddingLeft;
+            const paddingBoxTop = cardRect.top + borderTop + paddingTop;
+            
+            // カードの位置やサイズが変わった場合のみ更新（最適化）
+            if (Math.abs(cardRect.left - lastCardLeft) > 0.1 || 
+                Math.abs(cardRect.top - lastCardTop) > 0.1 ||
+                Math.abs(cardRect.width - lastCardWidth) > 0.1 ||
+                Math.abs(cardRect.height - lastCardHeight) > 0.1) {
+                
+                // カップの中心位置を計算（padding-box基準）
+                const targetCenterXInPaddingBox = paddingBoxWidth * leftPercent;
+                const targetCenterYInPaddingBox = paddingBoxHeight * topPercent;
+                
+                // 画面座標に変換
+                const targetScreenX = paddingBoxLeft + targetCenterXInPaddingBox;
+                const targetScreenY = paddingBoxTop + targetCenterYInPaddingBox;
+                
+                // 直接CSSプロパティを設定（GSAPより軽量）
+                cupCursor.style.left = targetScreenX + 'px';
+                cupCursor.style.top = targetScreenY + 'px';
+                // カードに配置されている時は傾きを適用しない
+                cupCursor.style.transform = 'translate(-50%, -50%) rotate(0deg)';
+                
+                // グローバル変数も更新
+                cupX = targetScreenX;
+                cupY = targetScreenY;
+                
+                // 前回の値を更新
+                lastCardLeft = cardRect.left;
+                lastCardTop = cardRect.top;
+                lastCardWidth = cardRect.width;
+                lastCardHeight = cardRect.height;
+            }
+        };
+        
+        // 初回実行
+        updatePosition();
+        
+        // スクロールとリサイズイベントで更新（throttleでパフォーマンス最適化）
+        let scrollTimeout = null;
+        let resizeTimeout = null;
+        
+        const handleScroll = () => {
+            if (cupPlacedOnCard && placedCardElement === cardElement) {
+                if (scrollTimeout) return; // 既にスケジュール済みならスキップ
+                scrollTimeout = requestAnimationFrame(() => {
+                    updatePosition();
+                    scrollTimeout = null;
+                });
+            }
+        };
+        
+        const handleResize = () => {
+            if (cupPlacedOnCard && placedCardElement === cardElement) {
+                if (resizeTimeout) return; // 既にスケジュール済みならスキップ
+                resizeTimeout = requestAnimationFrame(() => {
+                    updatePosition();
+                    resizeTimeout = null;
+                });
+            }
+        };
+        
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        window.addEventListener('resize', handleResize);
+        
+        scrollListener = handleScroll;
+        resizeListener = handleResize;
+    }
+    
+    // カップ位置の監視を停止
+    function stopCupPositionTracking() {
+        if (cupPositionUpdateInterval !== null) {
+            cancelAnimationFrame(cupPositionUpdateInterval);
+            cupPositionUpdateInterval = null;
+        }
+        if (scrollListener) {
+            window.removeEventListener('scroll', scrollListener);
+            scrollListener = null;
+        }
+        if (resizeListener) {
+            window.removeEventListener('resize', resizeListener);
+            resizeListener = null;
+        }
+    }
+    
+    // カードの位置に合わせてカップの位置を更新（スクロール時など）
+    // ※ reparent 方式により未使用（安全のため残置）。呼ばれても即 return。
+    function updateCupPositionOnCard() {
+        // ※ reparent 方式により未使用（安全のため残置）。呼ばれても即 return。
+        return;
+    }
+
+    // カップをカードから離し、body に戻してフォロワーに復帰
+    function resetCupFromCard() {
+        if (!cupCursor) return;
+
+        // カップ位置の監視を停止
+        stopCupPositionTracking();
+
+        // 状態クリア
+        cupPlacedOnCard = false;
+        placedCardElement = null;
+        cupCursor.classList.remove('moving-to-card', 'placed');
+        cupLockedToCard = false; // ロック解除（再びマウスに追従）
+
+        // 傾きをリセット
+        cupRotation = 0;
+        targetRotation = 0;
+        previousMouseX = window.mouseX || window.innerWidth / 2; // 現在のマウス位置を設定
+
+        // グローバル層（body）へ戻す（既にbodyにある場合は不要）
+        if (cupCursor.parentElement !== document.body) {
+            document.body.appendChild(cupCursor);
+        }
+        cupCursor.style.position = 'fixed';
+        cupCursor.style.left = (window.mouseX || window.innerWidth / 2) + 'px';
+        cupCursor.style.top  = (window.mouseY || window.innerHeight / 2) + 'px';
+        cupCursor.style.transform = 'translate(-50%, -50%) rotate(0deg)';
+
+        // マウス追従を再開
+        attachCupMouseMove();
+    }
 
     // --- Scratch Interaction Functions ---
 
@@ -824,6 +1412,7 @@
             if (event.data === YT.PlayerState.PLAYING) {
                 isPlaying = true;
                 isPausedByDiscInteraction = false; // 再生状態になったらリセット
+                isLoadingNewTrack = false; // 再生開始で読み込み完了
                 if (largeDiscContainer) largeDiscContainer.classList.add('playing');
                 // Start updating seek bar when playing
                 startSeekBarUpdates();
@@ -832,6 +1421,13 @@
                 if (currentTrackInfo) {
                     console.log("Adding visible class to track info");
                     currentTrackInfo.classList.add('visible');
+                }
+                // 再生開始時、カップを現在のカード上に固定（未配置の場合）
+                if (cupCursor && !cupPlacedOnCard && currentPlayerCardId) {
+                    const currentCardEl = document.getElementById(currentPlayerCardId);
+                    if (currentCardEl) {
+                        moveCupInstantToCard(currentCardEl);
+                    }
                 }
                 // 再生モードコントロールを表示
                 if (playbackControlContainer) {
@@ -843,6 +1439,12 @@
                 if (largeDiscContainer) largeDiscContainer.classList.remove('playing');
                 // Update seek bar one last time when paused/stopped
                 updateSeekBarUI();
+                
+                // 完全停止（UNSTARTED）の場合はカップをリセット
+                // ただし、新しいトラックの読み込み中（isLoadingNewTrack = true）の場合はリセットしない
+                if (event.data === YT.PlayerState.UNSTARTED && !isLoadingNewTrack) {
+                    resetCupFromCard();
+                }
                 
                 if (event.data !== YT.PlayerState.BUFFERING) { // バッファリング中は表示したまま
                     // ディスク操作による一時停止かどうかをチェック
@@ -1087,6 +1689,20 @@
             console.log("Card Click: Cancelled active disc drag.");
         }
 
+        // カップをカードに移動させる
+        const cardElement = document.getElementById(item.id);
+        if (cardElement && cupCursor) {
+            moveCupToCard(cardElement, () => {
+                // カップがカードに到達した後に再生処理を実行
+                executePlayback(item);
+            });
+        } else {
+            // カップ要素がない場合は通常通り再生
+            executePlayback(item);
+        }
+    }
+
+    function executePlayback(item) {
         if (currentPlayerCardId === item.id) {
             console.log("Same card clicked — 完全停止します");
             
@@ -1100,12 +1716,16 @@
             }
             isPlaying = false;
             isPausedByDiscInteraction = false;
+            isLoadingNewTrack = false; // 停止時にもリセット
 
             // 2. Reset related UI elements (like sound bars, card visuals)
             resetAllPlayerCardVisuals();
             stopSoundBars();
 
-            // 3. Trigger retraction animation
+            // 3. カップをカードから離す
+            resetCupFromCard();
+
+            // 4. Trigger retraction animation
             if (bottomPlayerContainer) {
                 bottomPlayerContainer.classList.add('retracted');
                 // Remove 'visible' class to ensure it animates correctly with the 'bottom' property change
@@ -1113,7 +1733,7 @@
                 console.log("Added 'retracted', removed 'visible'");
             }
 
-            // 4. Clear large disc transform just in case
+            // 5. Clear large disc transform just in case
             if(largeDiscContainer && largeDisc) {
                 // Reset visual rotation on tap/retract
                 currentDiscRotation = 0;
@@ -1121,13 +1741,13 @@
                 largeDiscContainer.classList.remove('playing'); // Ensure spin animation is off
             }
 
-            // 5. Hide track info
+            // 6. Hide track info
             const currentTrackInfo = document.getElementById('current-track-info');
             if (currentTrackInfo) {
                 currentTrackInfo.classList.remove('visible');
             }
 
-            // 6. Hide and reset seek bar
+            // 7. Hide and reset seek bar
             if (seekBarContainer) {
                 seekBarContainer.classList.remove('visible');
                 // Clear any update interval
@@ -1150,6 +1770,9 @@
                 deactivateCard(currentPlayerCardId);
             }
             stopSoundBars(); // Stop catalog card animation
+            
+            // 前のカードのカップ位置トラッキングを停止
+            stopCupPositionTracking();
 
             currentPlayerCardId = item.id;
             currentVideoId = item.videoId;

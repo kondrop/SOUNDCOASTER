@@ -1,51 +1,70 @@
-const NOTION_API_KEY = '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';
-const NOTION_DATABASE_ID = '1c9f75320d048097aeb3ff9da3840cd0';
+// ====== Code.gs (fixed) ======
+const SP = PropertiesService.getScriptProperties();
+const NOTION_TOKEN = SP.getProperty('NOTION_TOKEN');
+const DATABASE_ID  = (SP.getProperty('NOTION_DB_ID') || '').trim();
 
-// ウェブアプリケーションとしてGETリクエストを処理する関数
 function doGet() {
-  const data = fetchNotionData();
-  return ContentService.createTextOutput(JSON.stringify(data))
-    .setMimeType(ContentService.MimeType.JSON);
+  try {
+    if (!NOTION_TOKEN || !DATABASE_ID) {
+      return jsonError('Missing NOTION_TOKEN or NOTION_DB_ID in Script Properties');
+    }
+
+    const url = `https://api.notion.com/v1/databases/${normalizeDbId(DATABASE_ID)}/query`;
+    const res = UrlFetchApp.fetch(url, {
+      method: 'post',
+      contentType: 'application/json',
+      payload: JSON.stringify({}), // フィルタ不要なら空
+      headers: {
+        'Authorization': `Bearer ${NOTION_TOKEN}`,
+        'Notion-Version': '2022-06-28'
+      },
+      muteHttpExceptions: true
+    });
+
+    const code = res.getResponseCode();
+    const text = res.getContentText();
+    Logger.log(`Notion response: ${code}\n${text}`);
+
+    if (code < 200 || code >= 300) {
+      return jsonError(`Failed to query data source: Notion API Error: ${code} - ${text}`);
+    }
+
+    const json = JSON.parse(text);
+
+    // ★列名は Notion の表示名と同じにする（大小文字含む）
+    const items = (json.results || []).map(page => {
+      const p = page.properties || {};
+      return {
+        videoId: getRichText(p.VideoID) || getTitle(p.VideoID) || '', // ← VideoID（D大文字）
+        title:   getTitle(p.Title) || '',
+        artist:  getRichText(p.Artist) || '',
+        tags:    getMultiSelect(p.Tags)
+      };
+    }).filter(x => x.videoId);
+
+    return jsonOk(items);
+
+  } catch (e) {
+    return jsonError(`Apps Script Error: ${e.message}`);
+  }
 }
 
-// Notionからデータを取得する関数
-function fetchNotionData() {
-  const url = `https://api.notion.com/v1/databases/${NOTION_DATABASE_ID}/query`;
-  const options = {
-    'method': 'post',
-    'headers': {
-      'Authorization': `Bearer ${NOTION_API_KEY}`,
-      'Notion-Version': '2022-06-28',
-      'Content-Type': 'application/json'
-    },
-    'muteHttpExceptions': true
-  };
-  
-  try {
-    const response = UrlFetchApp.fetch(url, options);
-    const data = JSON.parse(response.getContentText());
-    
-    // Notionのデータを必要な形式に変換
-    return data.results.map(page => {
-      // 各プロパティが存在するか確認しつつ取得
-      const title = page.properties.Title?.title[0]?.plain_text || 'Untitled';
-      const videoId = page.properties.VideoID?.rich_text[0]?.plain_text || '';
-      const artist = page.properties.Artist?.rich_text[0]?.plain_text || 'Unknown Artist';
-      // Tags (マルチセレクト) プロパティを取得し、タグ名の配列に変換
-      const tags = page.properties.Tags?.multi_select?.map(tag => tag.name) || []; 
-      
-      return {
-        title: title,
-        videoId: videoId,
-        artist: artist,
-        tags: tags // tags配列を追加
-      };
-    }).filter(item => item.videoId); // videoIdがないものは除外
-    
-  } catch (error) {
-    return {
-      error: true,
-      message: error.toString()
-    };
-  }
-} 
+// --- helpers ---
+function normalizeDbId(id) {
+  const m = (id || '').match(/[0-9a-fA-F]{32}/);
+  return (m ? m[0] : id).toLowerCase();
+}
+function getTitle(prop){ return prop?.title?.[0]?.plain_text || ''; }
+function getRichText(prop){ return prop?.rich_text?.[0]?.plain_text || ''; }
+function getMultiSelect(prop){ return (prop?.multi_select || []).map(o => o.name); }
+
+function jsonOk(payload){
+  const out = ContentService.createTextOutput(JSON.stringify(payload));
+  out.setMimeType(ContentService.MimeType.JSON);
+  return out;
+}
+function jsonError(message){
+  const out = ContentService.createTextOutput(JSON.stringify({ error:true, message }));
+  out.setMimeType(ContentService.MimeType.JSON);
+  return out;
+}
