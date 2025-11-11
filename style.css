@@ -931,6 +931,27 @@ body {
     transition: transform 0.1s ease-out; /* スムーズに追従 */
     opacity: 1;
     display: block;
+    will-change: left, top;
+}
+
+#cup-cursor img {
+    display: block;
+    width: 100%;
+    height: auto;
+    pointer-events: none;
+}
+
+#cup-liquid {
+    position: absolute;
+    left: 43%;
+    top: 10%;
+    width: 73%;
+    height: 54%;
+    transform: translate(-50%, 0);
+    border-radius: 50% 50% 50% 50%;
+    pointer-events: none;
+    overflow: hidden;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.25));
 }
 
 /* カップがカードに移動する時のアニメーション */

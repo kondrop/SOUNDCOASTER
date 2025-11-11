@@ -59,6 +59,7 @@
     let randomPlaybackBtn = null;
     // カップマウスストーカー要素
     let cupCursor = null;
+    let cupLiquidSim = null;
     // カスタムマウスカーソル要素
     let customCursor = null;
     let customCursorMoveHandlerAttached = false;
@@ -269,6 +270,7 @@
             addSeekBarListeners(); // Add listeners for the seek bar
             addPlaybackModeListeners(); // 再生モードリスナーを追加
             initializeCupCursor(); // カップマウスストーカーの初期化
+            cupLiquidSim = initializeCupLiquid();
             initializeCustomCursor(); // カスタムマウスカーソルの初期化
             // Custom volume listener setup is done in onPlayerReady
         }
@@ -277,7 +279,268 @@
     // Call initialization when the DOM is ready
     document.addEventListener('DOMContentLoaded', initializeDOMElements);
 
+    function initializeCupLiquid() {
+        if (!cupCursor) {
+            return null;
+        }
+        const canvas = cupCursor.querySelector('#cup-liquid');
+        if (!canvas) {
+            console.warn('Cup liquid canvas element not found.');
+            return null;
+        }
+        const sim = createCupLiquidSimulation(canvas);
+        if (!sim) {
+            console.warn('Failed to initialise cup liquid simulation.');
+        }
+        return sim;
+    }
+
+    function createCupLiquidSimulation(canvas) {
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+            console.warn('2D context for cup liquid canvas is unavailable.');
+            return null;
+        }
+
+        const coffee = [198, 156, 114];
+        const milk = [246, 228, 210];
+        const crema = [224, 192, 158];
+
+        const params = {
+            damping: 0.93,
+            waveSpeed: 0.51,
+        };
+
+        let width = 0;
+        let height = 0;
+        let prev = null;
+        let curr = null;
+        let next = null;
+        let imageData = null;
+        let animationId = null;
+        let resizePending = false;
+        let lastPointer = null;
+        let lastScreenPointer = null;
+        let dropRadius = 55;
+        let baseStrength = 1.0;
+        let idleCounter = 0;
+
+        function updateDerivedParams() {
+            dropRadius = Math.max(3, Math.round(width * 0.12));
+            baseStrength = 1.2 + width * 0.012;
+        }
+
+        function allocate() {
+            const ratio = window.devicePixelRatio || 1;
+            const displayWidth = Math.max(2, Math.floor(canvas.clientWidth * ratio));
+            const displayHeight = Math.max(2, Math.floor(canvas.clientHeight * ratio));
+            if (displayWidth === width && displayHeight === height) {
+                return;
+            }
+            width = displayWidth;
+            height = displayHeight;
+            canvas.width = width;
+            canvas.height = height;
+            prev = new Float32Array(width * height);
+            curr = new Float32Array(width * height);
+            next = new Float32Array(width * height);
+            imageData = ctx.createImageData(width, height);
+            updateDerivedParams();
+        }
+
+        function scheduleResize() {
+            if (resizePending) return;
+            resizePending = true;
+            requestAnimationFrame(() => {
+                resizePending = false;
+                allocate();
+            });
+        }
+
+        let resizeObserver = null;
+        let resizeListener = null;
+        if (window.ResizeObserver) {
+            resizeObserver = new ResizeObserver(scheduleResize);
+            resizeObserver.observe(canvas);
+        } else {
+            resizeListener = scheduleResize;
+            window.addEventListener('resize', resizeListener, { passive: true });
+        }
+
+        function addDrop(x, y, strength) {
+            if (!curr) return;
+            const radius = dropRadius;
+            const minX = Math.max(1, Math.floor(x - radius));
+            const maxX = Math.min(width - 2, Math.ceil(x + radius));
+            const minY = Math.max(1, Math.floor(y - radius));
+            const maxY = Math.min(height - 2, Math.ceil(y + radius));
+            for (let yy = minY; yy <= maxY; yy++) {
+                const rowIndex = yy * width;
+                for (let xx = minX; xx <= maxX; xx++) {
+                    const dx = xx - x;
+                    const dy = yy - y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < radius) {
+                        const falloff = Math.cos((dist / radius) * Math.PI) * 0.5 + 0.5;
+                        curr[rowIndex + xx] += strength * falloff;
+                    }
+                }
+            }
+        }
+
+        function updateField() {
+            if (!curr || !prev || !next) return;
+            for (let y = 1; y < height - 1; y++) {
+                const rowIndex = y * width;
+                for (let x = 1; x < width - 1; x++) {
+                    const i = rowIndex + x;
+                    const sum = curr[i - 1] + curr[i + 1] + curr[i - width] + curr[i + width];
+                    next[i] = (sum * params.waveSpeed - prev[i]) * params.damping;
+                }
+            }
+            const tmp = prev;
+            prev = curr;
+            curr = next;
+            next = tmp;
+            next.fill(0);
+
+            if (!lastPointer) {
+                idleCounter++;
+                if (idleCounter > 220) {
+                    idleCounter = 0;
+                    addDrop(
+                        width * (0.35 + Math.random() * 0.3),
+                        height * (0.32 + Math.random() * 0.1),
+                        baseStrength * 0.35
+                    );
+                }
+            } else {
+                idleCounter = 0;
+            }
+        }
+
+        function renderField() {
+            if (!imageData || !curr) return;
+            const data = imageData.data;
+            const total = width * height;
+            for (let i = 0; i < total; i++) {
+                const v = Math.max(-1, Math.min(1, curr[i]));
+                const blend = (v + 1) * 0.5;
+                let r, g, b;
+                if (blend < 0.5) {
+                    const t = blend / 0.5;
+                    r = milk[0] * (1 - t) + crema[0] * t;
+                    g = milk[1] * (1 - t) + crema[1] * t;
+                    b = milk[2] * (1 - t) + crema[2] * t;
+                } else {
+                    const t = (blend - 0.5) / 0.5;
+                    r = crema[0] * (1 - t) + coffee[0] * t;
+                    g = crema[1] * (1 - t) + coffee[1] * t;
+                    b = crema[2] * (1 - t) + coffee[2] * t;
+                }
+                const idx = i * 4;
+                data[idx] = r;
+                data[idx + 1] = g;
+                data[idx + 2] = b;
+                data[idx + 3] = 255;
+            }
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        function handlePointer(globalX, globalY) {
+            if (typeof globalX !== 'number' || typeof globalY !== 'number') {
+                lastPointer = null;
+                lastScreenPointer = null;
+                return;
+            }
+            const rect = canvas.getBoundingClientRect();
+            if (rect.width === 0 || rect.height === 0) {
+                lastPointer = null;
+                lastScreenPointer = null;
+                return;
+            }
+            const localX = ((globalX - rect.left) / rect.width) * width;
+            const localY = ((globalY - rect.top) / rect.height) * height;
+            const margin = Math.max(12, width * 0.6);
+            if (localX < -margin || localX > width + margin || localY < -margin || localY > height + margin) {
+                lastPointer = null;
+                lastScreenPointer = { x: globalX, y: globalY };
+                return;
+            }
+
+            const clampedX = Math.min(width - 2, Math.max(1, localX));
+            const clampedY = Math.min(height - 2, Math.max(1, localY));
+
+            const travel = lastScreenPointer
+                ? Math.min(1.8, Math.hypot(globalX - lastScreenPointer.x, globalY - lastScreenPointer.y) / 28)
+                : 0.6;
+            const strength = baseStrength * (0.5 + travel);
+
+            if (lastPointer) {
+                const dx = clampedX - lastPointer.x;
+                const dy = clampedY - lastPointer.y;
+                const steps = Math.max(Math.abs(dx), Math.abs(dy));
+                if (steps === 0) {
+                    addDrop(clampedX, clampedY, strength);
+                } else {
+                    for (let s = 0; s <= steps; s++) {
+                        const px = lastPointer.x + (dx * s) / steps;
+                        const py = lastPointer.y + (dy * s) / steps;
+                        addDrop(px, py, strength * 0.85);
+                    }
+                }
+            } else {
+                addDrop(clampedX, clampedY, strength);
+            }
+
+            lastPointer = { x: clampedX, y: clampedY };
+            lastScreenPointer = { x: globalX, y: globalY };
+        }
+
+        function releasePointer() {
+            lastPointer = null;
+            lastScreenPointer = null;
+        }
+
+        function step() {
+            if (width === 0 || height === 0) {
+                allocate();
+            }
+            updateField();
+            renderField();
+            animationId = requestAnimationFrame(step);
+        }
+
+        allocate();
+        step();
+
+        return {
+            handlePointer,
+            releasePointer,
+            dispose() {
+                if (animationId !== null) {
+                    cancelAnimationFrame(animationId);
+                    animationId = null;
+                }
+                releasePointer();
+                if (resizeObserver) {
+                    resizeObserver.disconnect();
+                    resizeObserver = null;
+                }
+                if (resizeListener) {
+                    window.removeEventListener('resize', resizeListener);
+                    resizeListener = null;
+                }
+            },
+        };
+    }
+
     // --- カップマウスストーカー機能 ---
+    document.addEventListener('mouseleave', () => {
+        if (cupLiquidSim && typeof cupLiquidSim.releasePointer === 'function') {
+            cupLiquidSim.releasePointer();
+        }
+    });
     let isMovingToCard = false; // グローバルフラグ
     let cupPlacedOnCard = false; // カップがカード上に配置されているか
     let placedCardElement = null; // カップが配置されているカード要素
@@ -353,6 +616,9 @@ function clampCupPosition(x, y) {
         const { x: targetMouseX, y: targetMouseY } = clampCupPosition(rawMouseX, rawMouseY);
         window.mouseX = targetMouseX;
         window.mouseY = targetMouseY;
+        if (cupLiquidSim && typeof cupLiquidSim.handlePointer === 'function') {
+            cupLiquidSim.handlePointer(rawMouseX, rawMouseY);
+        }
 
         // ロック中/移動中/再生中に配置済みなら追従を停止
         if (cupLockedToCard || isMovingToCard || (isPlaying && cupPlacedOnCard)) {

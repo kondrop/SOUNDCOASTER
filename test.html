@@ -1,0 +1,219 @@
+<style>
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+    background: #1c1109;
+    color: #f8f5f2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    padding: 24px;
+  }
+
+  #rippleCanvas {
+    border-radius: 12px;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
+    cursor: crosshair;
+  }
+
+  #controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px 24px;
+    width: min(680px, 100%);
+    padding: 16px 20px;
+    border-radius: 12px;
+    background: rgba(34, 24, 18, 0.8);
+    backdrop-filter: blur(6px);
+  }
+
+  #controls label {
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+    gap: 6px;
+  }
+
+  #controls input[type="range"] {
+    width: 100%;
+  }
+
+  #controls .value {
+    font-size: 12px;
+    opacity: 0.8;
+  }
+</style>
+
+<canvas id="rippleCanvas" width="300" height="300"></canvas>
+
+<section id="controls">
+  <label>
+    Damping
+    <input type="range" id="damping" min="0.90" max="0.999" step="0.001" value="0.96">
+    <span class="value" data-for="damping"></span>
+  </label>
+  <label>
+    Wave Speed
+    <input type="range" id="waveSpeed" min="0.20" max="0.80" step="0.01" value="0.50">
+    <span class="value" data-for="waveSpeed"></span>
+  </label>
+  <label>
+    Drop Radius
+    <input type="range" id="dropRadius" min="6" max="60" step="1" value="20">
+    <span class="value" data-for="dropRadius"></span>
+  </label>
+  <label>
+    Drop Strength
+    <input type="range" id="dropStrength" min="0.5" max="5" step="0.1" value="1.5">
+    <span class="value" data-for="dropStrength"></span>
+  </label>
+  <label>
+    Trail Strength
+    <input type="range" id="trailFactor" min="0.2" max="1" step="0.05" value="0.6">
+    <span class="value" data-for="trailFactor"></span>
+  </label>
+</section>
+<script>
+const canvas = document.getElementById('rippleCanvas');
+const ctx = canvas.getContext('2d');
+const w = canvas.width, h = canvas.height;
+let prev = new Float32Array(w * h);
+let curr = new Float32Array(w * h);
+let next = new Float32Array(w * h);
+const params = {
+  damping: 0.96,
+  waveSpeed: 0.51,
+  dropRadius: 20,
+  dropStrength: 1.5,
+  trailFactor: 0.6,
+};
+const coffee = [198, 156, 114]; // 深いカフェラテ色
+const milk = [246, 228, 210];   // ミルク色
+const crema = [224, 192, 158];  // 中間色
+let lastPointer = null;
+
+function update() {
+  for (let y=1; y<h-1; y++) {
+    for (let x=1; x<w-1; x++) {
+      const i = y*w + x;
+      const sum = curr[i-1] + curr[i+1] + curr[i-w] + curr[i+w];
+      next[i] = (sum * params.waveSpeed - prev[i]) * params.damping;
+    }
+  }
+  // バッファを入れ替え
+  const tmp = prev;
+  prev = curr;
+  curr = next;
+  next = tmp;
+  next.fill(0);
+}
+
+function render() {
+  const img = ctx.createImageData(w, h);
+  for (let i=0; i<w*h; i++) {
+    const v = Math.max(-1, Math.min(1, curr[i]));
+    const blend = (v + 1) * 0.5;
+    let color;
+    if (blend < 0.5) {
+      const t = blend / 0.5;
+      color = [
+        milk[0] * (1 - t) + crema[0] * t,
+        milk[1] * (1 - t) + crema[1] * t,
+        milk[2] * (1 - t) + crema[2] * t,
+      ];
+    } else {
+      const t = (blend - 0.5) / 0.5;
+      color = [
+        crema[0] * (1 - t) + coffee[0] * t,
+        crema[1] * (1 - t) + coffee[1] * t,
+        crema[2] * (1 - t) + coffee[2] * t,
+      ];
+    }
+    img.data[i*4+0] = color[0];
+    img.data[i*4+1] = color[1];
+    img.data[i*4+2] = color[2];
+    img.data[i*4+3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+function loop() {
+  update();
+  render();
+  requestAnimationFrame(loop);
+}
+
+function addDrop(x, y, strength = params.dropStrength) {
+  const radius = params.dropRadius;
+  const minX = Math.max(1, x - radius);
+  const maxX = Math.min(w - 2, x + radius);
+  const minY = Math.max(1, y - radius);
+  const maxY = Math.min(h - 2, y + radius);
+  for (let yy = minY; yy <= maxY; yy++) {
+    for (let xx = minX; xx <= maxX; xx++) {
+      const dx = xx - x;
+      const dy = yy - y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      if (dist < radius) {
+        const falloff = Math.cos((dist / radius) * Math.PI) * 0.5 + 0.5;
+        curr[yy*w + xx] += strength * falloff;
+      }
+    }
+  }
+}
+
+function handlePointer(e) {
+  const rect = canvas.getBoundingClientRect();
+  const x = Math.floor((e.clientX - rect.left) * (canvas.width / rect.width));
+  const y = Math.floor((e.clientY - rect.top) * (canvas.height / rect.height));
+  if (lastPointer) {
+    const dx = x - lastPointer.x;
+    const dy = y - lastPointer.y;
+    const steps = Math.max(Math.abs(dx), Math.abs(dy));
+    for (let s = 0; s <= steps; s++) {
+      const ix = Math.floor(lastPointer.x + (dx * s) / steps);
+      const iy = Math.floor(lastPointer.y + (dy * s) / steps);
+      addDrop(ix, iy, params.dropStrength * params.trailFactor);
+    }
+  } else {
+    addDrop(x, y);
+  }
+  lastPointer = { x, y };
+}
+
+canvas.addEventListener('mousemove', handlePointer);
+canvas.addEventListener('mouseenter', handlePointer);
+canvas.addEventListener('mouseleave', () => {
+  lastPointer = null;
+});
+
+const controlSpecs = [
+  { id: 'damping', key: 'damping', parse: parseFloat, format: v => v.toFixed(3) },
+  { id: 'waveSpeed', key: 'waveSpeed', parse: parseFloat, format: v => v.toFixed(2) },
+  { id: 'dropRadius', key: 'dropRadius', parse: v => parseInt(v, 10), format: v => `${v}px` },
+  { id: 'dropStrength', key: 'dropStrength', parse: parseFloat, format: v => v.toFixed(1) },
+  { id: 'trailFactor', key: 'trailFactor', parse: parseFloat, format: v => v.toFixed(2) },
+];
+
+controlSpecs.forEach(({ id, key, parse, format }) => {
+  const input = document.getElementById(id);
+  const valueEl = document.querySelector(`[data-for="${id}"]`);
+  if (!input || !valueEl) return;
+  if (Object.prototype.hasOwnProperty.call(params, key)) {
+    input.value = params[key];
+  }
+  const updateDisplay = (val) => {
+    valueEl.textContent = format ? format(val) : val;
+  };
+  params[key] = parse ? parse(input.value) : input.value;
+  updateDisplay(params[key]);
+  input.addEventListener('input', () => {
+    const parsed = parse ? parse(input.value) : input.value;
+    params[key] = parsed;
+    updateDisplay(parsed);
+  });
+});
+
+loop();
+</script>
