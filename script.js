@@ -302,9 +302,9 @@
             return null;
         }
 
-        const coffee = [198, 156, 114];
-        const milk = [246, 228, 210];
-        const crema = [224, 192, 158];
+        const coffee = [161, 109, 58]; // A16D3A のRGB値に変更
+        const milk = [237, 214, 182];   // EDD6B6: 指定のミルク色に変更
+        const crema = [181, 139, 85];   // 濃いめのクレマ色
 
         const params = {
             damping: 0.93,
@@ -321,7 +321,7 @@
         let resizePending = false;
         let lastPointer = null;
         let lastScreenPointer = null;
-        let dropRadius = 55;
+        let dropRadius = 85;
         let baseStrength = 1.0;
         let idleCounter = 0;
 
@@ -631,9 +631,9 @@ function clampCupPosition(x, y) {
 
         // マウスの横方向の動きを検出して傾き角度を計算
         const deltaX = targetMouseX - previousMouseX;
-        // 画面幅に対する移動量の割合に基づいて傾きを計算（最大30度まで）
-        const maxRotation = 30; // 最大傾き角度
-        const sensitivity = 0.6; // 感度調整
+        // 画面幅に対する移動量の割合に基づいて傾きを計算（最大45度まで）
+        const maxRotation = 45; // 最大傾き角度
+        const sensitivity = 1.2; // 感度調整（横方向の動きに対する傾きの強さ）
         targetRotation = Math.max(-maxRotation, Math.min(maxRotation, deltaX * sensitivity));
         previousMouseX = targetMouseX;
 

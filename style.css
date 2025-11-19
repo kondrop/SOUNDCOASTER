@@ -23,7 +23,7 @@
   --page-padding: 30px;           /* ページの内側の余白 */
   --page-bottom-padding: 250px;   /* ページ下部の余白 */
   --container-max-width: 1400px;  /* コンテナの最大幅 */
-  --card-gap: 10px;              /* カード間の間隔 */
+  --card-gap: 16px;              /* カード間の間隔 */
   --title-margin-bottom: 20px;    /* タイトル下の余白 */
   --tag-filter-margin-bottom: 40px; /* タグフィルター下の余白 */
   --tag-button-gap: 10px;          /* タグボタン間の間隔 */
@@ -84,13 +84,13 @@
 }
 
 .catalog-container {
-    max-width: var(--container-max-width);
+    max-width: calc(5 * var(--player-card-width) + 4 * var(--card-gap) + 2 * var(--catalog-padding-x)); /* 最大5列分の幅 */
     margin: 10px auto;
     display: flex; /* Flexboxを使用 */
     flex-wrap: wrap; /* 折り返しを許可 */
     column-gap: var(--card-gap); /* カード間のスペース */
-    row-gap: 5px;
-    justify-content: center; /* カードを中央揃えに配置 */
+    row-gap: var(--card-gap); /* カード間のスペース（縦方向） */
+    justify-content: center; /* カード群を中央揃え */
     /* コンテナが表示されることを確認 */
     min-height: 100px; /* 表示確認のための最小高さを追加 */
     padding-left: var(--catalog-padding-x);
@@ -485,9 +485,21 @@
 }
 
 /* レスポンシブ調整 */
+@media (max-width: 1200px) {
+    .catalog-container {
+        max-width: calc(4 * var(--player-card-width) + 3 * var(--card-gap) + 2 * var(--catalog-padding-x));
+    }
+}
+
+@media (max-width: 900px) {
+    .catalog-container {
+        max-width: calc(3 * var(--player-card-width) + 2 * var(--card-gap) + 2 * var(--catalog-padding-x));
+    }
+}
+
 @media (max-width: 600px) {
-    .player-card {
-        flex-basis: calc(50% - 15px); /* 2列 (gap/2) */
+    .catalog-container {
+        max-width: calc(2 * var(--player-card-width) + 1 * var(--card-gap) + 2 * var(--catalog-padding-x));
     }
     .disc-container {
         width: 140px;
@@ -497,13 +509,11 @@
 
 @media (max-width: 480px) {
      .catalog-container {
+         max-width: calc(1 * var(--player-card-width) + 2 * 10px);
          gap: var(--card-gap); /* より小さいギャップ */
          padding-left: 10px; /* ある程度のパディングを確保 */
          padding-right: 10px;
      }
-    .player-card {
-        flex-basis: 100%; /* 1列 */
-    }
     .disc-container {
         width: 160px;
         height: 160px;
